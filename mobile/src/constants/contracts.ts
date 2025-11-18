@@ -162,7 +162,7 @@ export const TriviaBattleABI = [
 export const CONTRACT_ADDRESSES = {
   alfajores: '', // Update after deployment
   celo: '', // Update after deployment
-  'celo-sepolia': '', // Update after deployment
+  'celo-sepolia': '0xAbB8c5D478F5FA20e4f8bc719B9B09b67Dd03ECd', // Deployed on Celo Sepolia
 };
 
 // Network configuration
