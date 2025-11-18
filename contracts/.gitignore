@@ -1,0 +1,21 @@
+node_modules/
+.env
+.env.local
+cache/
+artifacts/
+typechain-types/
+.openzeppelin/
+coverage/
+coverage.json
+
+cache
+artifacts
+
+# Environment variables
+.env
+
+# Deployments (keep in repo but ignore specific deployments if needed)
+# deployments/*.json
+
+# Node modules
+node_modules
