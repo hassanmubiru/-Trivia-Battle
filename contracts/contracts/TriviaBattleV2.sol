@@ -100,7 +100,7 @@ contract TriviaBattleV2 is ReentrancyGuard, Ownable, Pausable {
     // Escrow tracking
     mapping(uint256 => mapping(address => uint256)) public escrowBalances; // matchId => token => amount
 
-    constructor() {
+    constructor() Ownable(msg.sender) {
         // Token addresses are network-specific
         // Use addSupportedToken() after deployment to configure tokens for your network
         // For Celo Sepolia testnet, deploy mock tokens or configure available testnet tokens
@@ -299,14 +299,8 @@ contract TriviaBattleV2 is ReentrancyGuard, Ownable, Pausable {
         playerStats[msg.sender].totalEarnings += playerPrize;
         playerStats[msg.sender].totalMatches++;
 
-        // Update token-specific earnings
-        if (match_.token == CUSD) {
-            playerStats[msg.sender].totalEarningsCUSD += playerPrize;
-        } else if (match_.token == USDC) {
-            playerStats[msg.sender].totalEarningsUSDC += playerPrize;
-        } else if (match_.token == USDT) {
-            playerStats[msg.sender].totalEarningsUSDT += playerPrize;
-        }
+        // Update token-specific earnings (tracked in totalEarnings for simplicity)
+        // Token-specific tracking removed as token addresses are network-specific
 
         // Release from escrow and transfer prize
         require(escrowBalances[matchId][match_.token] >= playerPrize, "Insufficient escrow");
