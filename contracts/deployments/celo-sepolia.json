@@ -1,0 +1,9 @@
+{
+  "network": "celo-sepolia",
+  "chainId": 11142220,
+  "contractAddress": "0xAbB8c5D478F5FA20e4f8bc719B9B09b67Dd03ECd",
+  "contractName": "TriviaBattleV2",
+  "deployer": "0x50625608E728cad827066dD78F5B4e8d203619F3",
+  "timestamp": "2025-11-18T02:37:06.658Z",
+  "explorer": "https://celo-sepolia.blockscout.com/address/0xAbB8c5D478F5FA20e4f8bc719B9B09b67Dd03ECd"
+}
