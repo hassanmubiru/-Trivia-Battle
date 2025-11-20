@@ -162,8 +162,20 @@ export const TriviaBattleABI = [
 export const CONTRACT_ADDRESSES = {
   alfajores: '', // Update after deployment
   celo: '', // Update after deployment
-  'celo-sepolia': '0xAbB8c5D478F5FA20e4f8bc719B9B09b67Dd03ECd', // Deployed on Celo Sepolia
+  'celo-sepolia': '0xE40DE1f269E2aD112c6faeaA3df4ECAf2E512869', // TriviaBattleV3 - Fully On-Chain
 };
+
+// Supported tokens
+export const SUPPORTED_TOKENS = {
+  'celo-sepolia': {
+    cUSD: '0xc2FB5a20d07036d828cBbF2FCEE5cea02cc9Cb2f',
+    USDC: '0x360Da2CcFE307B5CB0330d062d8D83B721811B76',
+    USDT: '0xE5eA34847A04d197B22652be1Dc8FbFf11392239',
+  },
+};
+
+// Default network
+export const DEFAULT_NETWORK = 'celo-sepolia';
 
 // Network configuration
 export const NETWORKS = {
