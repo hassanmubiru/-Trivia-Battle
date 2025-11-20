@@ -144,21 +144,26 @@ async function main() {
           const matchId = parsed.args.matchId;
           console.log("✓ Match created! Match ID:", matchId.toString());
           
-          // Get match details
-          const matchDetails = await TriviaBattle.getMatchDetails(matchId);
-          console.log("\nMatch Details:");
-          console.log("- Match ID:", matchDetails.matchId_.toString());
-          console.log("- Token:", matchDetails.token);
-          console.log("- Entry Fee:", hre.ethers.formatUnits(matchDetails.entryFee, 18));
-          console.log("- Prize Pool:", hre.ethers.formatUnits(matchDetails.prizePool, 18));
-          console.log("- Status:", matchDetails.status);
-          console.log("- Current Players:", matchDetails.currentPlayers.toString());
-          console.log("- Max Players:", matchDetails.maxPlayers.toString());
-          console.log("- Players:", matchDetails.players);
-          
-          // Check escrow
-          const escrowBalance = await TriviaBattle.getEscrowBalance(matchId, testToken);
-          console.log("- Escrow Balance:", hre.ethers.formatUnits(escrowBalance, 18));
+          // Get match details - need to call with proper parameters
+          try {
+            const matchDetails = await TriviaBattle.getMatchDetails(matchId);
+            console.log("\nMatch Details:");
+            console.log("- Match ID:", matchDetails[0].toString());
+            console.log("- Players:", matchDetails[1]);
+            console.log("- Token:", matchDetails[2]);
+            console.log("- Entry Fee:", hre.ethers.formatUnits(matchDetails[3], 18));
+            console.log("- Prize Pool:", hre.ethers.formatUnits(matchDetails[4], 18));
+            console.log("- Status:", matchDetails[5].toString());
+            console.log("- Start Time:", matchDetails[6].toString());
+            console.log("- Current Players:", matchDetails[7].toString());
+            console.log("- Max Players:", matchDetails[8].toString());
+            
+            // Check escrow
+            const escrowBalance = await TriviaBattle.getEscrowBalance(matchId, testToken);
+            console.log("- Escrow Balance:", hre.ethers.formatUnits(escrowBalance, 18));
+          } catch (error) {
+            console.error("Error getting match details:", error.message);
+          }
         }
       } else {
         console.log("⚠️  Insufficient token balance. Mint tokens first using:");
