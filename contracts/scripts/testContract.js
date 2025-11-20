@@ -27,11 +27,16 @@ async function main() {
   console.log("\nContract Address:", deployment.contractAddress);
   
   // Get signers
-  const [deployer, player1, player2] = await hre.ethers.getSigners();
+  const signers = await hre.ethers.getSigners();
+  const deployer = signers[0];
   console.log("\nTest accounts:");
   console.log("- Deployer/Owner:", deployer.address);
-  console.log("- Player 1:", player1.address);
-  console.log("- Player 2:", player2.address);
+  if (signers.length > 1) {
+    console.log("- Player 1:", signers[1].address);
+  }
+  if (signers.length > 2) {
+    console.log("- Player 2:", signers[2].address);
+  }
   
   // Get contract instance
   const TriviaBattle = await hre.ethers.getContractAt(
