@@ -5,5 +5,11 @@
   "contractName": "TriviaBattleV2",
   "deployer": "0x50625608E728cad827066dD78F5B4e8d203619F3",
   "timestamp": "2025-11-18T02:37:06.658Z",
-  "explorer": "https://celo-sepolia.blockscout.com/address/0xAbB8c5D478F5FA20e4f8bc719B9B09b67Dd03ECd"
+  "explorer": "https://celo-sepolia.blockscout.com/address/0xAbB8c5D478F5FA20e4f8bc719B9B09b67Dd03ECd",
+  "supportedTokens": {
+    "cUSD": "0xc2FB5a20d07036d828cBbF2FCEE5cea02cc9Cb2f",
+    "USDC": "0x360Da2CcFE307B5CB0330d062d8D83B721811B76",
+    "USDT": "0xE5eA34847A04d197B22652be1Dc8FbFf11392239"
+  },
+  "lastUpdated": "2025-11-20T17:02:19.264Z"
 }
