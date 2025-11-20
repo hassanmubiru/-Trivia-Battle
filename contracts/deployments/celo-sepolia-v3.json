@@ -1,0 +1,17 @@
+{
+  "network": "celo-sepolia",
+  "chainId": "11142220",
+  "contractAddress": "0xE40DE1f269E2aD112c6faeaA3df4ECAf2E512869",
+  "contractName": "TriviaBattleV3",
+  "deployer": "0x50625608E728cad827066dD78F5B4e8d203619F3",
+  "timestamp": "2025-11-20T19:07:02.100Z",
+  "explorer": "https://celo-sepolia.blockscout.com/address/0xE40DE1f269E2aD112c6faeaA3df4ECAf2E512869",
+  "features": [
+    "Fully on-chain questions storage",
+    "No database required",
+    "Auto-match start",
+    "Real-time scoring",
+    "Multi-token support",
+    "Escrow system"
+  ]
+}
