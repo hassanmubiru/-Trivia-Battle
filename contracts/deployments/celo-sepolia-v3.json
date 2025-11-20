@@ -20,5 +20,8 @@
     "USDT": "0xE5eA34847A04d197B22652be1Dc8FbFf11392239"
   },
   "tokensConfigured": true,
-  "lastUpdated": "2025-11-20T19:11:03.170Z"
+  "lastUpdated": "2025-11-20T19:11:03.170Z",
+  "questionsSeeded": true,
+  "totalQuestions": "20",
+  "lastSeededAt": "2025-11-20T19:13:12.980Z"
 }
