@@ -60,15 +60,14 @@ android {
 }
 
 dependencies {
-    implementation fileTree(dir: "libs", include: ["*.jar"])
-    implementation "com.facebook.react:react-native:+"  // From node_modules
-    implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.0.0"
+    // The version of react-native is set by the React Native Gradle Plugin
+    implementation("com.facebook.react:react-android")
     
-    debugImplementation("com.facebook.flipper:flipper:0.182.0")
-    debugImplementation("com.facebook.flipper:flipper-network-plugin:0.182.0") {
-        exclude group:'com.squareup.okhttp3', module:'okhttp'
+    implementation("com.facebook.react:flipper-integration")
+    
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation jscFlavor
     }
-    debugImplementation("com.facebook.flipper:flipper-fresco-plugin:0.182.0")
-
-    implementation jscFlavor
 }
