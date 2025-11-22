@@ -17,6 +17,7 @@
   },
   "private": true,
   "devDependencies": {
-    "@babel/preset-typescript": "^7.28.5"
+    "@babel/preset-typescript": "^7.28.5",
+    "babel-preset-expo": "^54.0.7"
   }
 }
