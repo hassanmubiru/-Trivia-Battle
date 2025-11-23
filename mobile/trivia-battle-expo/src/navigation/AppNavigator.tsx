@@ -12,12 +12,13 @@ import GameSessionScreen from '../screens/GameSessionScreen';
 import LeaderboardScreen from '../screens/LeaderboardScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
-const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator<any>();
+const Tab = createBottomTabNavigator<any>();
 
 function MainTabs() {
   return (
     <Tab.Navigator
+      id="MainTabs"
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
@@ -61,6 +62,7 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator
+        id="RootStack"
         screenOptions={{
           headerShown: false,
           cardStyle: { backgroundColor: '#1a1a1a' },
