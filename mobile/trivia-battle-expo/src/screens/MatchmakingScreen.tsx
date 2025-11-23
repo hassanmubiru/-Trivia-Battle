@@ -13,7 +13,28 @@ export default function MatchmakingScreen({ route, navigation }: any) {
       setDots(prev => prev.length >= 3 ? '' : prev + '.');
     }, 500);
 
-    // Simulate matchmaking
+    // TODO: Connect to real matchmaking backend
+    // const matchmaking = async () => {
+    //   try {
+    //     const response = await fetch(`${API_URL}/matchmaking/join`, {
+    //       method: 'POST',
+    //       headers: { 'Content-Type': 'application/json' },
+    //       body: JSON.stringify({ mode, stake }),
+    //     });
+    //     const { gameId, opponentId } = await response.json();
+    //     setStatus('Opponent found!');
+    //     setTimeout(() => {
+    //       navigation.replace('GameSession', { mode, stake, gameId, opponentId });
+    //     }, 1500);
+    //   } catch (error) {
+    //     console.error('Matchmaking error:', error);
+    //     Alert.alert('Error', 'Failed to find opponent');
+    //     navigation.goBack();
+    //   }
+    // };
+    // matchmaking();
+
+    // Temporary: Simulate matchmaking for demo
     const matchTimer = setTimeout(() => {
       setStatus('Opponent found!');
       setTimeout(() => {
