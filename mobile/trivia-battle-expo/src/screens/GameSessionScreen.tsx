@@ -25,17 +25,21 @@ export default function GameSessionScreen({ route, navigation }: any) {
 
   const loadQuestions = async () => {
     try {
-      // TODO: Fetch from your backend API
-      // const response = await fetch(`YOUR_API_URL/questions?mode=${mode}`);
-      // const data = await response.json();
-      // setQuestions(data.questions);
+      setLoading(true);
       
-      // For now, return empty to show proper loading/error state
-      Alert.alert(
-        'No Questions Available',
-        'Questions need to be loaded from your backend API. Please implement the API endpoint.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      // Fetch questions from decentralized storage
+      const { getQuestionsForMode } = await import('../services/questionsService');
+      const fetchedQuestions = await getQuestionsForMode(mode);
+      
+      // Transform to match component format
+      const formattedQuestions = fetchedQuestions.map(q => ({
+        question: q.question,
+        options: q.options,
+        correct: q.correctAnswer,
+      }));
+      
+      setQuestions(formattedQuestions);
+      
     } catch (error) {
       console.error('Failed to load questions:', error);
       Alert.alert('Error', 'Failed to load questions', [
