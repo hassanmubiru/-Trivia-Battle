@@ -1,38 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-// Sample questions
-const SAMPLE_QUESTIONS = [
-  {
-    question: "What is the capital of France?",
-    options: ["London", "Berlin", "Paris", "Madrid"],
-    correct: 2,
-  },
-  {
-    question: "Which planet is known as the Red Planet?",
-    options: ["Venus", "Mars", "Jupiter", "Saturn"],
-    correct: 1,
-  },
-  {
-    question: "Who painted the Mona Lisa?",
-    options: ["Van Gogh", "Picasso", "Da Vinci", "Monet"],
-    correct: 2,
-  },
-  {
-    question: "What is the largest ocean on Earth?",
-    options: ["Atlantic", "Indian", "Arctic", "Pacific"],
-    correct: 3,
-  },
-  {
-    question: "In which year did World War II end?",
-    options: ["1943", "1944", "1945", "1946"],
-    correct: 2,
-  },
-];
+interface Question {
+  question: string;
+  options: string[];
+  correct: number;
+}
 
 export default function GameSessionScreen({ route, navigation }: any) {
   const { mode, stake } = route.params;
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState(0);
   const [opponentScore, setOpponentScore] = useState(0);
@@ -41,17 +20,48 @@ export default function GameSessionScreen({ route, navigation }: any) {
   const [isAnswered, setIsAnswered] = useState(false);
 
   useEffect(() => {
-    if (timeLeft > 0 && !isAnswered) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && !isAnswered) {
+    loadQuestions();
+  }, []);
+
+  const loadQuestions = async () => {
+    try {
+      // TODO: Fetch from your backend API
+      // const response = await fetch(`YOUR_API_URL/questions?mode=${mode}`);
+      // const data = await response.json();
+      // setQuestions(data.questions);
+      
+      // For now, return empty to show proper loading/error state
+      Alert.alert(
+        'No Questions Available',
+        'Questions need to be loaded from your backend API. Please implement the API endpoint.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    } catch (error) {
+      console.error('Failed to load questions:', error);
+      Alert.alert('Error', 'Failed to load questions', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (questions.length === 0 || timeLeft <= 0 || isAnswered) return;
+    
+    const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [timeLeft, isAnswered, questions]);
+
+  useEffect(() => {
+    if (timeLeft === 0 && !isAnswered && questions.length > 0) {
       handleTimeout();
     }
-  }, [timeLeft, isAnswered]);
+  }, [timeLeft]);
 
   useEffect(() => {
     // Simulate opponent answering
-    if (!isAnswered) {
+    if (!isAnswered && questions.length > 0) {
       const opponentTimer = setTimeout(() => {
         if (Math.random() > 0.3) {
           setOpponentScore(opponentScore + 1);
@@ -59,7 +69,7 @@ export default function GameSessionScreen({ route, navigation }: any) {
       }, Math.random() * 10000 + 3000);
       return () => clearTimeout(opponentTimer);
     }
-  }, [currentQuestion]);
+  }, [currentQuestion, questions]);
 
   const handleTimeout = () => {
     setIsAnswered(true);
@@ -69,12 +79,12 @@ export default function GameSessionScreen({ route, navigation }: any) {
   };
 
   const handleAnswer = (index: number) => {
-    if (isAnswered) return;
+    if (isAnswered || questions.length === 0) return;
     
     setSelectedAnswer(index);
     setIsAnswered(true);
     
-    if (index === SAMPLE_QUESTIONS[currentQuestion].correct) {
+    if (index === questions[currentQuestion].correct) {
       setScore(score + 1);
     }
     
@@ -84,7 +94,7 @@ export default function GameSessionScreen({ route, navigation }: any) {
   };
 
   const nextQuestion = () => {
-    if (currentQuestion < SAMPLE_QUESTIONS.length - 1) {
+    if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
       setSelectedAnswer(null);
       setIsAnswered(false);
