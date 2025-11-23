@@ -21,21 +21,27 @@ export default function HomeScreen({ navigation }: any) {
 
   const loadUserData = async () => {
     try {
+      setLoading(true);
       const phone = await AsyncStorage.getItem('userPhone');
       const wallet = await AsyncStorage.getItem('walletAddress');
       
       if (phone) setUsername(phone.slice(-4));
       if (wallet) {
         setUsername(wallet.slice(0, 6) + '...' + wallet.slice(-4));
-        // TODO: Fetch real balance from blockchain
-        // const balance = await fetchWalletBalance(wallet);
-        // setBalance(balance);
+        
+        // Fetch balance from blockchain
+        const { getWalletBalance, getUserStats } = await import('../services/blockchain');
+        const balanceValue = await getWalletBalance(wallet);
+        setBalance(balanceValue.toFixed(2));
+
+        // Fetch user stats from smart contract
+        const statsData = await getUserStats(wallet);
+        setStats({
+          gamesPlayed: statsData.gamesPlayed,
+          winRate: statsData.winRate,
+          ranking: 0, // Calculate from leaderboard position
+        });
       }
-      
-      // TODO: Fetch user stats from backend
-      // const response = await fetch(`YOUR_API_URL/user/stats`);
-      // const data = await response.json();
-      // setStats(data);
       
     } catch (error) {
       console.error('Failed to load user data:', error);
