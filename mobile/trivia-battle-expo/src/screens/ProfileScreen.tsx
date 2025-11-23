@@ -97,90 +97,99 @@ export default function ProfileScreen({ navigation }: any) {
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Stats Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Game Statistics</Text>
-          
-          <View style={styles.statsGrid}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>0</Text>
-              <Text style={styles.statLabel}>Total Games</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>0</Text>
-              <Text style={styles.statLabel}>Wins</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>0</Text>
-              <Text style={styles.statLabel}>Losses</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>0%</Text>
-              <Text style={styles.statLabel}>Win Rate</Text>
-            </View>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#00ff00" />
+            <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
-        </View>
-
-        {/* Earnings Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Earnings</Text>
-          
-          <View style={styles.earningsCard}>
-            <View style={styles.earningsRow}>
-              <Text style={styles.earningsLabel}>Total Earned</Text>
-              <Text style={styles.earningsValue}>0.00 CELO</Text>
+        ) : (
+          <>
+            {/* Stats Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Game Statistics</Text>
+              
+              <View style={styles.statsGrid}>
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>{stats.totalGames}</Text>
+                  <Text style={styles.statLabel}>Total Games</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>{stats.wins}</Text>
+                  <Text style={styles.statLabel}>Wins</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>{stats.losses}</Text>
+                  <Text style={styles.statLabel}>Losses</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>{stats.winRate}%</Text>
+                  <Text style={styles.statLabel}>Win Rate</Text>
+                </View>
+              </View>
             </View>
-            <View style={styles.earningsRow}>
-              <Text style={styles.earningsLabel}>Total Spent</Text>
-              <Text style={styles.earningsValue}>0.00 CELO</Text>
+
+            {/* Earnings Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Earnings</Text>
+              
+              <View style={styles.earningsCard}>
+                <View style={styles.earningsRow}>
+                  <Text style={styles.earningsLabel}>Total Earned</Text>
+                  <Text style={styles.earningsValue}>{earnings.totalEarned.toFixed(2)} CELO</Text>
+                </View>
+                <View style={styles.earningsRow}>
+                  <Text style={styles.earningsLabel}>Total Spent</Text>
+                  <Text style={styles.earningsValue}>{earnings.totalSpent.toFixed(2)} CELO</Text>
+                </View>
+                <View style={[styles.earningsRow, styles.earningsTotal]}>
+                  <Text style={styles.earningsTotalLabel}>Net Profit</Text>
+                  <Text style={styles.earningsTotalValue}>{earnings.netProfit.toFixed(2)} CELO</Text>
+                </View>
+              </View>
             </View>
-            <View style={[styles.earningsRow, styles.earningsTotal]}>
-              <Text style={styles.earningsTotalLabel}>Net Profit</Text>
-              <Text style={styles.earningsTotalValue}>0.00 CELO</Text>
+
+            {/* Account Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Account</Text>
+              
+              <View style={styles.infoCard}>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Phone</Text>
+                  <Text style={styles.infoValue}>{userInfo.phone}</Text>
+                </View>
+                <View style={styles.infoDivider} />
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Wallet</Text>
+                  <Text style={styles.infoValue} numberOfLines={1}>
+                    {userInfo.wallet}
+                  </Text>
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
 
-        {/* Account Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
-          
-          <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Phone</Text>
-              <Text style={styles.infoValue}>{userInfo.phone}</Text>
+            {/* Actions */}
+            <TouchableOpacity style={styles.actionButton}>
+              <Text style={styles.actionButtonText}>💰 Deposit Funds</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionButton}>
+              <Text style={styles.actionButtonText}>💸 Withdraw</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionButton}>
+              <Text style={styles.actionButtonText}>📜 Transaction History</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.actionButton, styles.logoutButton]} onPress={handleLogout}>
+              <Text style={[styles.actionButtonText, styles.logoutText]}>🚪 Logout</Text>
+            </TouchableOpacity>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Trivia Battle v1.0.0</Text>
+              <Text style={styles.footerText}>Built on Celo Blockchain</Text>
             </View>
-            <View style={styles.infoDivider} />
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Wallet</Text>
-              <Text style={styles.infoValue} numberOfLines={1}>
-                {userInfo.wallet}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Actions */}
-        <TouchableOpacity style={styles.actionButton}>
-          <Text style={styles.actionButtonText}>💰 Deposit Funds</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton}>
-          <Text style={styles.actionButtonText}>💸 Withdraw</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton}>
-          <Text style={styles.actionButtonText}>📜 Transaction History</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={[styles.actionButton, styles.logoutButton]} onPress={handleLogout}>
-          <Text style={[styles.actionButtonText, styles.logoutText]}>🚪 Logout</Text>
-        </TouchableOpacity>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Trivia Battle v1.0.0</Text>
-          <Text style={styles.footerText}>Built on Celo Blockchain</Text>
-        </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -355,5 +364,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginVertical: 2,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  loadingText: {
+    color: '#999',
+    fontSize: 14,
+    marginTop: 15,
   },
 });
