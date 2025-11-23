@@ -115,7 +115,30 @@ export default function GameSessionScreen({ route, navigation }: any) {
     );
   };
 
-  const question = SAMPLE_QUESTIONS[currentQuestion];
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#00ff00" />
+          <Text style={styles.loadingText}>Loading questions...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.emptyText}>No questions available</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const question = questions[currentQuestion];
 
   return (
     <View style={styles.container}>
