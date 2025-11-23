@@ -20,14 +20,25 @@ export default function LeaderboardScreen() {
 
   const loadLeaderboard = async () => {
     try {
-      // TODO: Fetch from backend API
-      // const response = await fetch('YOUR_API_URL/leaderboard');
-      // const data = await response.json();
-      // setPlayers(data.players);
-      // setUserRank(data.userRank);
+      setLoading(true);
       
-      setPlayers([]);
+      // Fetch leaderboard from smart contract
+      const { getLeaderboard } = await import('../services/blockchain');
+      const leaderboardData = await getLeaderboard(100);
+      
+      // Transform blockchain data to match UI format
+      const formattedPlayers = leaderboardData.map(player => ({
+        rank: player.rank,
+        name: `${player.address.slice(0, 6)}...${player.address.slice(-4)}`,
+        wins: player.wins,
+        earnings: player.earnings.toFixed(2),
+      }));
+      
+      setPlayers(formattedPlayers);
+      
+      // TODO: Calculate user's rank from their wallet address
       setUserRank(null);
+      
     } catch (error) {
       console.error('Failed to load leaderboard:', error);
     } finally {
