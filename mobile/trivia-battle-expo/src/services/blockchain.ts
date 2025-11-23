@@ -8,8 +8,22 @@ import { ethers } from 'ethers';
 // Deployed TriviaBattleV3 contract
 const CONTRACT_ADDRESS = '0xE40DE1f269E2aD112c6faeaA3df4ECAf2E512869';
 
-// Celo Alfajores Testnet (for testing) - Switch to Mainnet for production
-const RPC_URL = 'https://alfajores-forno.celo-testnet.org';
+// Celo RPC URLs (with fallbacks)
+const RPC_URLS = [
+  'https://forno.celo.org', // Mainnet
+  'https://rpc.ankr.com/celo',
+  'https://1rpc.io/celo',
+];
+
+// Use testnet for development
+const TESTNET_RPC_URLS = [
+  'https://alfajores-forno.celo-testnet.org',
+  'https://celo-alfajores.infura.io/v3/00000000000000000000000000000000',
+];
+
+// Set to true for testnet, false for mainnet
+const USE_TESTNET = true;
+const RPC_URL = USE_TESTNET ? TESTNET_RPC_URLS[0] : RPC_URLS[0];
 
 // Complete ABI for TriviaBattleV3 contract
 const CONTRACT_ABI = [
@@ -42,9 +56,15 @@ const CONTRACT_ABI = [
 
 /**
  * Get provider (read-only)
+ * Creates a new provider instance with proper network configuration
  */
 export function getProvider(): ethers.JsonRpcProvider {
-  return new ethers.JsonRpcProvider(RPC_URL);
+  const provider = new ethers.JsonRpcProvider(
+    RPC_URL,
+    USE_TESTNET ? { name: 'celo-alfajores', chainId: 44787 } : { name: 'celo', chainId: 42220 },
+    { staticNetwork: true } // Skip network detection to avoid errors
+  );
+  return provider;
 }
 
 /**
