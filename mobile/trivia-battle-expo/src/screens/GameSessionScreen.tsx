@@ -165,13 +165,13 @@ export default function GameSessionScreen({ route, navigation }: any) {
       {/* Question Progress */}
       <View style={styles.progress}>
         <Text style={styles.progressText}>
-          Question {currentQuestion + 1} of {SAMPLE_QUESTIONS.length}
+          Question {currentQuestion + 1} of {questions.length}
         </Text>
         <View style={styles.progressBar}>
           <View 
             style={[
               styles.progressFill, 
-              { width: `${((currentQuestion + 1) / SAMPLE_QUESTIONS.length) * 100}%` }
+              { width: `${((currentQuestion + 1) / questions.length) * 100}%` }
             ]} 
           />
         </View>
@@ -347,5 +347,20 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: '#999',
+  },
+  emptyText: {
+    fontSize: 18,
+    color: '#999',
+    textAlign: 'center',
   },
 });
