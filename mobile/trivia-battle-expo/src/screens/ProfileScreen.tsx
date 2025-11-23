@@ -1,25 +1,70 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+interface UserStats {
+  totalGames: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+}
+
+interface UserEarnings {
+  totalEarned: number;
+  totalSpent: number;
+  netProfit: number;
+}
+
 export default function ProfileScreen({ navigation }: any) {
+  const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState({
     phone: '',
     wallet: '',
   });
+  const [stats, setStats] = useState<UserStats>({
+    totalGames: 0,
+    wins: 0,
+    losses: 0,
+    winRate: 0,
+  });
+  const [earnings, setEarnings] = useState<UserEarnings>({
+    totalEarned: 0,
+    totalSpent: 0,
+    netProfit: 0,
+  });
 
   useEffect(() => {
-    loadUserInfo();
+    loadUserData();
   }, []);
 
-  const loadUserInfo = async () => {
-    const phone = await AsyncStorage.getItem('userPhone');
-    const wallet = await AsyncStorage.getItem('walletAddress');
-    setUserInfo({
-      phone: phone || 'Not set',
-      wallet: wallet || 'Not connected',
-    });
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load basic user info
+      const phone = await AsyncStorage.getItem('userPhone');
+      const wallet = await AsyncStorage.getItem('walletAddress');
+      setUserInfo({
+        phone: phone || 'Not set',
+        wallet: wallet || 'Not connected',
+      });
+
+      // TODO: Fetch user stats from backend API
+      // const response = await fetch(`${API_URL}/users/${wallet}/stats`);
+      // const statsData = await response.json();
+      // setStats(statsData);
+
+      // TODO: Fetch user earnings from blockchain
+      // const earningsData = await fetchUserEarnings(wallet);
+      // setEarnings(earningsData);
+
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      Alert.alert('Error', 'Failed to load profile data');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogout = async () => {
