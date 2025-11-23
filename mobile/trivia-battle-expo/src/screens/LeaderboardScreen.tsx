@@ -1,27 +1,62 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-const SAMPLE_LEADERBOARD = [
-  { rank: 1, name: '0x1234...5678', wins: 150, earnings: '125.50' },
-  { rank: 2, name: '0x8765...4321', wins: 142, earnings: '118.20' },
-  { rank: 3, name: '0xabcd...efgh', wins: 138, earnings: '112.80' },
-  { rank: 4, name: '0x9876...1234', wins: 125, earnings: '98.40' },
-  { rank: 5, name: '0x5555...6666', wins: 118, earnings: '91.30' },
-  { rank: 6, name: '0x7777...8888', wins: 110, earnings: '85.60' },
-  { rank: 7, name: '0x3333...4444', wins: 105, earnings: '79.20' },
-  { rank: 8, name: '0x1111...2222', wins: 98, earnings: '72.10' },
-  { rank: 9, name: '0x9999...0000', wins: 92, earnings: '66.50' },
-  { rank: 10, name: '0xaaaa...bbbb', wins: 87, earnings: '61.40' },
-];
+interface LeaderboardPlayer {
+  rank: number;
+  name: string;
+  wins: number;
+  earnings: string;
+}
 
 export default function LeaderboardScreen() {
+  const [players, setPlayers] = useState<LeaderboardPlayer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userRank, setUserRank] = useState<number | null>(null);
+
+  useEffect(() => {
+    loadLeaderboard();
+  }, []);
+
+  const loadLeaderboard = async () => {
+    try {
+      // TODO: Fetch from backend API
+      // const response = await fetch('YOUR_API_URL/leaderboard');
+      // const data = await response.json();
+      // setPlayers(data.players);
+      // setUserRank(data.userRank);
+      
+      setPlayers([]);
+      setUserRank(null);
+    } catch (error) {
+      console.error('Failed to load leaderboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getRankEmoji = (rank: number) => {
     if (rank === 1) return '🥇';
     if (rank === 2) return '🥈';
     if (rank === 3) return '🥉';
     return `${rank}`;
   };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.header}>
+          <Text style={styles.title}>🏆 Leaderboard</Text>
+          <Text style={styles.subtitle}>Top Players This Week</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#00ff00" />
+          <Text style={styles.loadingText}>Loading leaderboard...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -33,35 +68,51 @@ export default function LeaderboardScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {SAMPLE_LEADERBOARD.map((player) => (
-          <View 
-            key={player.rank} 
-            style={[
-              styles.playerCard,
-              player.rank <= 3 && styles.topPlayerCard
-            ]}
-          >
-            <View style={styles.rankBox}>
-              <Text style={styles.rankText}>{getRankEmoji(player.rank)}</Text>
-            </View>
-            
-            <View style={styles.playerInfo}>
-              <Text style={styles.playerName}>{player.name}</Text>
-              <Text style={styles.playerStats}>{player.wins} wins</Text>
-            </View>
-            
-            <View style={styles.earningsBox}>
-              <Text style={styles.earnings}>{player.earnings}</Text>
-              <Text style={styles.earningsLabel}>CELO</Text>
-            </View>
+        {players.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>📊</Text>
+            <Text style={styles.emptyTitle}>No Rankings Yet</Text>
+            <Text style={styles.emptyText}>
+              Be the first to play and climb the leaderboard!
+            </Text>
           </View>
-        ))}
+        ) : (
+          <>
+            {players.map((player) => (
+              <View 
+                key={player.rank} 
+                style={[
+                  styles.playerCard,
+                  player.rank <= 3 && styles.topPlayerCard
+                ]}
+              >
+                <View style={styles.rankBox}>
+                  <Text style={styles.rankText}>{getRankEmoji(player.rank)}</Text>
+                </View>
+                
+                <View style={styles.playerInfo}>
+                  <Text style={styles.playerName}>{player.name}</Text>
+                  <Text style={styles.playerStats}>{player.wins} wins</Text>
+                </View>
+                
+                <View style={styles.earningsBox}>
+                  <Text style={styles.earnings}>{player.earnings}</Text>
+                  <Text style={styles.earningsLabel}>CELO</Text>
+                </View>
+              </View>
+            ))}
+          </>
+        )}
         
         <View style={styles.yourRankCard}>
           <Text style={styles.yourRankLabel}>Your Rank</Text>
           <View style={styles.yourRankInfo}>
-            <Text style={styles.yourRankNumber}>#--</Text>
-            <Text style={styles.yourRankText}>Play games to get ranked!</Text>
+            <Text style={styles.yourRankNumber}>
+              {userRank ? `#${userRank}` : '#--'}
+            </Text>
+            <Text style={styles.yourRankText}>
+              {userRank ? 'Keep climbing!' : 'Play games to get ranked!'}
+            </Text>
           </View>
         </View>
       </ScrollView>
