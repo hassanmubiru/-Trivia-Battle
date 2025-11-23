@@ -29,18 +29,25 @@ export default function HomeScreen({ navigation }: any) {
       if (wallet) {
         setUsername(wallet.slice(0, 6) + '...' + wallet.slice(-4));
         
-        // Fetch balance from blockchain
-        const { getWalletBalance, getUserStats } = await import('../services/blockchain');
-        const balanceValue = await getWalletBalance(wallet);
-        setBalance(balanceValue.toFixed(2));
+        try {
+          // Fetch balance from blockchain
+          const { getWalletBalance, getUserStats } = await import('../services/blockchain');
+          const balanceValue = await getWalletBalance(wallet);
+          setBalance(balanceValue.toFixed(2));
 
-        // Fetch user stats from smart contract
-        const statsData = await getUserStats(wallet);
-        setStats({
-          gamesPlayed: statsData.gamesPlayed,
-          winRate: statsData.winRate,
-          ranking: 0, // Calculate from leaderboard position
-        });
+          // Fetch user stats from smart contract
+          const statsData = await getUserStats(wallet);
+          setStats({
+            gamesPlayed: statsData.gamesPlayed,
+            winRate: statsData.winRate,
+            ranking: 0, // Calculate from leaderboard position
+          });
+        } catch (blockchainError) {
+          console.error('Blockchain connection error:', blockchainError);
+          // Set default values if blockchain is unavailable
+          setBalance('0.00');
+          setStats({ gamesPlayed: 0, winRate: 0, ranking: 0 });
+        }
       }
       
     } catch (error) {
