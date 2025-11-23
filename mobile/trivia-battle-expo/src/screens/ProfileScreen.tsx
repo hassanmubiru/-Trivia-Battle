@@ -50,14 +50,26 @@ export default function ProfileScreen({ navigation }: any) {
         wallet: wallet || 'Not connected',
       });
 
-      // TODO: Fetch user stats from backend API
-      // const response = await fetch(`${API_URL}/users/${wallet}/stats`);
-      // const statsData = await response.json();
-      // setStats(statsData);
+      if (wallet) {
+        // Fetch user stats from smart contract
+        const { getUserStats, getWalletBalance } = await import('../services/blockchain');
+        const statsData = await getUserStats(wallet);
+        
+        setStats({
+          totalGames: statsData.gamesPlayed,
+          wins: statsData.wins,
+          losses: statsData.losses,
+          winRate: statsData.winRate,
+        });
 
-      // TODO: Fetch user earnings from blockchain
-      // const earningsData = await fetchUserEarnings(wallet);
-      // setEarnings(earningsData);
+        // Fetch earnings from blockchain
+        const balance = await getWalletBalance(wallet);
+        setEarnings({
+          totalEarned: statsData.totalEarnings,
+          totalSpent: 0, // Would need to calculate from game history
+          netProfit: balance,
+        });
+      }
 
     } catch (error) {
       console.error('Error loading user data:', error);
