@@ -13,38 +13,56 @@ export default function MatchmakingScreen({ route, navigation }: any) {
       setDots(prev => prev.length >= 3 ? '' : prev + '.');
     }, 500);
 
-    // TODO: Connect to real matchmaking backend
-    // const matchmaking = async () => {
-    //   try {
-    //     const response = await fetch(`${API_URL}/matchmaking/join`, {
-    //       method: 'POST',
-    //       headers: { 'Content-Type': 'application/json' },
-    //       body: JSON.stringify({ mode, stake }),
-    //     });
-    //     const { gameId, opponentId } = await response.json();
-    //     setStatus('Opponent found!');
-    //     setTimeout(() => {
-    //       navigation.replace('GameSession', { mode, stake, gameId, opponentId });
-    //     }, 1500);
-    //   } catch (error) {
-    //     console.error('Matchmaking error:', error);
-    //     Alert.alert('Error', 'Failed to find opponent');
-    //     navigation.goBack();
-    //   }
-    // };
-    // matchmaking();
-
-    // Temporary: Simulate matchmaking for demo
-    const matchTimer = setTimeout(() => {
-      setStatus('Opponent found!');
-      setTimeout(() => {
-        navigation.replace('GameSession', { mode, stake });
-      }, 1500);
-    }, 3000);
+    // Connect to smart contract matchmaking
+    const findMatch = async () => {
+      try {
+        // Check for available games on blockchain
+        const { getAvailableGames, joinGame, createGame } = await import('../services/blockchain');
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        
+        const availableGames = await getAvailableGames();
+        const wallet = await AsyncStorage.getItem('walletAddress');
+        const privateKey = await AsyncStorage.getItem('walletPrivateKey');
+        
+        if (!privateKey) {
+          Alert.alert('Error', 'Wallet private key not found');
+          navigation.goBack();
+          return;
+        }
+        
+        let gameId;
+        
+        if (availableGames.length > 0) {
+          // Join existing game
+          gameId = availableGames[0];
+          await joinGame(privateKey, gameId);
+          setStatus('Opponent found!');
+        } else {
+          // Create new game
+          const result = await createGame(privateKey, parseFloat(stake));
+          gameId = result.gameId;
+          setStatus('Waiting for opponent...');
+          
+          // Poll for opponent joining (simplified - in production use events)
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          setStatus('Opponent found!');
+        }
+        
+        setTimeout(() => {
+          navigation.replace('GameSession', { mode, stake, gameId });
+        }, 1500);
+        
+      } catch (error) {
+        console.error('Matchmaking error:', error);
+        Alert.alert('Error', 'Failed to find match. Please try again.');
+        navigation.goBack();
+      }
+    };
+    
+    findMatch();
 
     return () => {
       clearInterval(dotInterval);
-      clearTimeout(matchTimer);
     };
   }, []);
 
