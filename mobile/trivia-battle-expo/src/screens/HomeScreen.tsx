@@ -1,21 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+interface UserStats {
+  gamesPlayed: number;
+  winRate: number;
+  ranking: number;
+}
 
 export default function HomeScreen({ navigation }: any) {
   const [balance, setBalance] = useState('0.00');
   const [username, setUsername] = useState('Player');
+  const [stats, setStats] = useState<UserStats>({ gamesPlayed: 0, winRate: 0, ranking: 0 });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadUserData();
   }, []);
 
   const loadUserData = async () => {
-    const phone = await AsyncStorage.getItem('userPhone');
-    const wallet = await AsyncStorage.getItem('walletAddress');
-    if (phone) setUsername(phone.slice(-4));
-    if (wallet) setUsername(wallet.slice(0, 6));
+    try {
+      const phone = await AsyncStorage.getItem('userPhone');
+      const wallet = await AsyncStorage.getItem('walletAddress');
+      
+      if (phone) setUsername(phone.slice(-4));
+      if (wallet) {
+        setUsername(wallet.slice(0, 6) + '...' + wallet.slice(-4));
+        // TODO: Fetch real balance from blockchain
+        // const balance = await fetchWalletBalance(wallet);
+        // setBalance(balance);
+      }
+      
+      // TODO: Fetch user stats from backend
+      // const response = await fetch(`YOUR_API_URL/user/stats`);
+      // const data = await response.json();
+      // setStats(data);
+      
+    } catch (error) {
+      console.error('Failed to load user data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const startGame = (mode: string, stake: string) => {
@@ -31,7 +57,11 @@ export default function HomeScreen({ navigation }: any) {
         <Text style={styles.welcome}>Welcome, {username}</Text>
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Your Balance</Text>
-          <Text style={styles.balance}>{balance} CELO</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="#00ff00" />
+          ) : (
+            <Text style={styles.balance}>{balance} CELO</Text>
+          )}
         </View>
       </View>
 
