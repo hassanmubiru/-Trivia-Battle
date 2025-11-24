@@ -51,24 +51,29 @@ export default function ProfileScreen({ navigation }: any) {
       });
 
       if (wallet) {
-        // Fetch user stats from smart contract
-        const { getUserStats, getWalletBalance } = await import('../services/blockchain');
-        const statsData = await getUserStats(wallet);
-        
-        setStats({
-          totalGames: statsData.gamesPlayed,
-          wins: statsData.wins,
-          losses: statsData.losses,
-          winRate: statsData.winRate,
-        });
+        try {
+          // Fetch user stats from smart contract
+          const { getUserStats, getWalletBalance } = await import('../services/blockchain');
+          const statsData = await getUserStats(wallet);
+          
+          setStats({
+            totalGames: statsData.gamesPlayed,
+            wins: statsData.wins,
+            losses: statsData.losses,
+            winRate: statsData.winRate,
+          });
 
-        // Fetch earnings from blockchain
-        const balance = await getWalletBalance(wallet);
-        setEarnings({
-          totalEarned: statsData.totalEarnings,
-          totalSpent: 0, // Would need to calculate from game history
-          netProfit: balance,
-        });
+          // Fetch earnings from blockchain
+          const balance = await getWalletBalance(wallet);
+          setEarnings({
+            totalEarned: statsData.totalEarnings,
+            totalSpent: 0, // Would need to calculate from game history
+            netProfit: balance,
+          });
+        } catch (blockchainError) {
+          console.error('Blockchain error in profile:', blockchainError);
+          // Keep default zero values if blockchain fails
+        }
       }
 
     } catch (error) {

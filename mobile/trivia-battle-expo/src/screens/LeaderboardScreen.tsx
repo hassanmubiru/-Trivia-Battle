@@ -22,7 +22,12 @@ export default function LeaderboardScreen() {
     try {
       setLoading(true);
       
-      // Fetch leaderboard from smart contract
+      // TODO: Enable when blockchain connection is stable
+      // For now, show empty state
+      setPlayers([]);
+      setUserRank(null);
+      
+      /* Uncomment when blockchain is working:
       const { getLeaderboard } = await import('../services/blockchain');
       const leaderboardData = await getLeaderboard(100);
       
@@ -35,9 +40,8 @@ export default function LeaderboardScreen() {
       }));
       
       setPlayers(formattedPlayers);
-      
-      // TODO: Calculate user's rank from their wallet address
       setUserRank(null);
+      */
       
     } catch (error) {
       console.error('Failed to load leaderboard:', error);

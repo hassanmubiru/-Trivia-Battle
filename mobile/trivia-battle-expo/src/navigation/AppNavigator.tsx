@@ -18,7 +18,6 @@ const Tab = createBottomTabNavigator<any>();
 function MainTabs() {
   return (
     <Tab.Navigator
-      id={undefined}
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
@@ -62,7 +61,6 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        id={undefined}
         screenOptions={{
           headerShown: false,
           cardStyle: { backgroundColor: '#1a1a1a' },
