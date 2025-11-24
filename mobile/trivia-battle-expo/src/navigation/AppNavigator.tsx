@@ -34,7 +34,7 @@ function MainTabs() {
         component={HomeScreen}
         options={{
           tabBarLabel: 'Home',
-          tabBarIcon: () => <Text style={{color: '#00ff00', fontSize: 20}}>🏠</Text>
+          tabBarIcon: ({ color, size }) => <Text style={{color, fontSize: size || 20}}>🏠</Text>
         }}
       />
       <Tab.Screen 
@@ -42,7 +42,7 @@ function MainTabs() {
         component={LeaderboardScreen}
         options={{
           tabBarLabel: 'Leaderboard',
-          tabBarIcon: () => <Text style={{color: '#00ff00', fontSize: 20}}>🏆</Text>
+          tabBarIcon: ({ color, size }) => <Text style={{color, fontSize: size || 20}}>🏆</Text>
         }}
       />
       <Tab.Screen 
@@ -50,7 +50,7 @@ function MainTabs() {
         component={ProfileScreen}
         options={{
           tabBarLabel: 'Profile',
-          tabBarIcon: () => <Text style={{color: '#00ff00', fontSize: 20}}>👤</Text>
+          tabBarIcon: ({ color, size }) => <Text style={{color, fontSize: size || 20}}>👤</Text>
         }}
       />
     </Tab.Navigator>
