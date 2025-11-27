@@ -18,20 +18,29 @@ const IPFS_GATEWAY = 'https://ipfs.io/ipfs/';
 
 // Question set IPFS hashes by difficulty
 // These hashes point to JSON files containing question arrays
-const QUESTION_SETS: Record<string, string> = {
+// Set to null until real hashes are uploaded
+const QUESTION_SETS: Record<string, string | null> = {
   // TODO: Upload question sets to IPFS and update these hashes
-  quick: 'QmQuickQuestionsHash123',   // 5 easy questions
-  standard: 'QmStandardQuestionsHash456', // 5 medium questions  
-  premium: 'QmPremiumQuestionsHash789',  // 5 hard questions
+  quick: null,   // Will be: 'QmQuickQuestionsHash123'
+  standard: null, // Will be: 'QmStandardQuestionsHash456'
+  premium: null,  // Will be: 'QmPremiumQuestionsHash789'
 };
 
 /**
  * Fetch questions from IPFS for a specific game mode
  */
 export async function fetchQuestionsFromIPFS(mode: string): Promise<Question[]> {
+  const ipfsHash = QUESTION_SETS[mode] || QUESTION_SETS.standard;
+  
+  // If no IPFS hash configured, use local questions directly
+  if (!ipfsHash) {
+    return getLocalQuestions(mode);
+  }
+  
   try {
-    const ipfsHash = QUESTION_SETS[mode] || QUESTION_SETS.standard;
-    const response = await fetch(`${IPFS_GATEWAY}${ipfsHash}`);
+    const response = await fetch(`${IPFS_GATEWAY}${ipfsHash}`, {
+      signal: AbortSignal.timeout(5000), // 5 second timeout
+    });
     
     if (!response.ok) {
       throw new Error('Failed to fetch questions from IPFS');
@@ -40,7 +49,7 @@ export async function fetchQuestionsFromIPFS(mode: string): Promise<Question[]> 
     const questions = await response.json();
     return questions;
   } catch (error) {
-    console.error('Error fetching questions from IPFS:', error);
+    console.warn('IPFS unavailable, using local questions');
     // Fallback to local questions if IPFS fails
     return getLocalQuestions(mode);
   }
