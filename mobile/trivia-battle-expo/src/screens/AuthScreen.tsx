@@ -172,7 +172,15 @@ const styles = StyleSheet.create({
   buttonSecondary: {
     backgroundColor: '#0088ff',
   },
+  buttonMiniPay: {
+    backgroundColor: '#FCFF52',
+  },
   buttonText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  buttonTextWhite: {
     color: '#000',
     fontSize: 16,
     fontWeight: 'bold',
