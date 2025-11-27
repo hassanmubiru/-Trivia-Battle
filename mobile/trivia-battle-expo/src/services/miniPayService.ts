@@ -1,263 +1,309 @@
 /**
  * MiniPay Service
- * Handles MiniPay SDK integration for seamless wallet onboarding
- * and SocialConnect for phone number-based authentication
+ * Integrates with Celo MiniPay wallet for seamless mobile payments
+ * 
+ * MiniPay is Opera's crypto wallet built on Celo, accessed via injected provider
  */
 
-import { SocialConnect } from '@celo/socialconnect';
-import { MiniPay } from '@celo/minipay-sdk';
-import { BigNumber } from 'bignumber.js';
+import { ethers } from 'ethers';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export interface MiniPayConfig {
-  apiKey: string;
-  network: 'alfajores' | 'celo';
-  redirectUrl?: string;
-}
+// Contract addresses on Celo
+const CELO_MAINNET = {
+  chainId: 42220,
+  rpcUrl: 'https://forno.celo.org',
+  name: 'Celo',
+  cUSD: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
+  USDC: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C',
+  USDT: '0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e',
+};
 
-export interface SocialConnectUser {
-  phoneNumber: string;
+const CELO_ALFAJORES = {
+  chainId: 44787,
+  rpcUrl: 'https://alfajores-forno.celo-testnet.org',
+  name: 'Celo Alfajores',
+  cUSD: '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1',
+  USDC: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B',
+  USDT: '0x02De4766C272abc10Bc88c220D214A26960a7e92',
+};
+
+// Use testnet for development
+const NETWORK = CELO_ALFAJORES;
+
+// TriviaBattle contract
+const TRIVIA_CONTRACT = '0xE40DE1f269E2aD112c6faeaA3df4ECAf2E512869';
+
+// ERC20 ABI for token interactions
+const ERC20_ABI = [
+  'function balanceOf(address owner) view returns (uint256)',
+  'function transfer(address to, uint256 amount) returns (bool)',
+  'function approve(address spender, uint256 amount) returns (bool)',
+  'function allowance(address owner, address spender) view returns (uint256)',
+  'function decimals() view returns (uint8)',
+  'function symbol() view returns (string)',
+];
+
+// TriviaBattle contract ABI (minimal)
+const TRIVIA_ABI = [
+  'function deposit() payable',
+  'function depositToken(address token, uint256 amount)',
+  'function withdraw(uint256 amount)',
+  'function withdrawToken(address token, uint256 amount)',
+  'function getBalance(address user) view returns (uint256)',
+  'function getTokenBalance(address user, address token) view returns (uint256)',
+  'function createGame(uint256 stake, address token) returns (uint256)',
+  'function joinGame(uint256 gameId)',
+];
+
+export interface WalletState {
   address: string;
-  verified: boolean;
-}
-
-export interface WalletInfo {
-  address: string;
-  network: string;
-  phoneNumber?: string;
-  balance: {
-    celo: BigNumber;
-    cusd: BigNumber;
-    usdc: BigNumber;
-    usdt: BigNumber;
+  isConnected: boolean;
+  isMiniPay: boolean;
+  balances: {
+    CELO: string;
+    cUSD: string;
+    USDC: string;
+    USDT: string;
   };
 }
 
 class MiniPayService {
-  private miniPay: MiniPay | null = null;
-  private socialConnect: SocialConnect | null = null;
-  private currentUser: SocialConnectUser | null = null;
-  private config: MiniPayConfig | null = null;
+  private provider: ethers.BrowserProvider | ethers.JsonRpcProvider | null = null;
+  private signer: ethers.Signer | null = null;
+  private walletAddress: string | null = null;
+  private isMiniPay: boolean = false;
 
   /**
-   * Initialize MiniPay SDK
+   * Check if running inside MiniPay app
    */
-  async initialize(config: MiniPayConfig): Promise<void> {
-    this.config = config;
-
-    try {
-      // Initialize MiniPay SDK
-      this.miniPay = new MiniPay({
-        apiKey: config.apiKey,
-        network: config.network,
-        redirectUrl: config.redirectUrl || 'triviabattle://callback',
-      });
-
-      // Initialize SocialConnect
-      this.socialConnect = new SocialConnect({
-        network: config.network,
-      });
-
-      await this.miniPay.initialize();
-      await this.socialConnect.initialize();
-    } catch (error) {
-      console.error('MiniPay initialization error:', error);
-      throw new Error('Failed to initialize MiniPay');
+  isMiniPayEnvironment(): boolean {
+    if (typeof window !== 'undefined' && (window as any).ethereum) {
+      const provider = (window as any).ethereum;
+      return provider.isMiniPay === true;
     }
+    return false;
   }
 
   /**
-   * Authenticate user with phone number via SocialConnect
+   * Initialize connection - tries MiniPay first, falls back to RPC
    */
-  async authenticateWithPhone(phoneNumber: string): Promise<SocialConnectUser> {
-    if (!this.socialConnect) {
-      throw new Error('SocialConnect not initialized');
-    }
-
+  async connect(): Promise<WalletState> {
     try {
-      // Request phone number verification
-      const verification = await this.socialConnect.requestVerification(phoneNumber);
-
-      // Verify OTP (in production, this would come from user input)
-      const verified = await this.socialConnect.verifyOTP(
-        phoneNumber,
-        verification.requestId,
-        '' // OTP from user input
-      );
-
-      if (verified) {
-        // Get or create wallet address for phone number
-        const address = await this.socialConnect.getAddress(phoneNumber);
-
-        this.currentUser = {
-          phoneNumber,
-          address,
-          verified: true,
-        };
-
-        return this.currentUser;
-      } else {
-        throw new Error('Phone verification failed');
+      // Check for MiniPay/injected provider
+      if (typeof window !== 'undefined' && (window as any).ethereum) {
+        const injectedProvider = (window as any).ethereum;
+        
+        const accounts = await injectedProvider.request({ 
+          method: 'eth_requestAccounts' 
+        });
+        
+        if (accounts && accounts.length > 0) {
+          this.provider = new ethers.BrowserProvider(injectedProvider);
+          this.signer = await this.provider.getSigner();
+          this.walletAddress = accounts[0];
+          this.isMiniPay = injectedProvider.isMiniPay === true;
+          
+          await AsyncStorage.setItem('walletAddress', this.walletAddress);
+          await AsyncStorage.setItem('isMiniPay', String(this.isMiniPay));
+          
+          const balances = await this.getAllBalances();
+          
+          return {
+            address: this.walletAddress,
+            isConnected: true,
+            isMiniPay: this.isMiniPay,
+            balances,
+          };
+        }
       }
+      
+      // Fallback: Check stored wallet address for read-only mode
+      const storedAddress = await AsyncStorage.getItem('walletAddress');
+      if (storedAddress) {
+        this.provider = new ethers.JsonRpcProvider(
+          NETWORK.rpcUrl,
+          { chainId: NETWORK.chainId, name: NETWORK.name }
+        );
+        this.walletAddress = storedAddress;
+        
+        const balances = await this.getAllBalances();
+        
+        return {
+          address: storedAddress,
+          isConnected: true,
+          isMiniPay: false,
+          balances,
+        };
+      }
+      
+      throw new Error('No wallet connected');
     } catch (error) {
-      console.error('SocialConnect authentication error:', error);
-      throw new Error('Phone authentication failed');
+      console.error('Connection error:', error);
+      throw error;
     }
   }
 
   /**
-   * Connect wallet via MiniPay
+   * Connect with wallet address (read-only mode)
    */
-  async connectWallet(): Promise<WalletInfo> {
-    if (!this.miniPay) {
-      throw new Error('MiniPay not initialized');
-    }
-
+  async connectWithAddress(address: string): Promise<WalletState> {
     try {
-      // Request wallet connection
-      const wallet = await this.miniPay.connect();
-
-      // Get balances for all supported tokens
-      const balances = await this.getBalances(wallet.address);
-
+      this.provider = new ethers.JsonRpcProvider(
+        NETWORK.rpcUrl,
+        { chainId: NETWORK.chainId, name: NETWORK.name }
+      );
+      this.walletAddress = address;
+      this.isMiniPay = false;
+      
+      await AsyncStorage.setItem('walletAddress', address);
+      
+      const balances = await this.getAllBalances();
+      
       return {
-        address: wallet.address,
-        network: this.config?.network || 'alfajores',
-        phoneNumber: this.currentUser?.phoneNumber,
-        balance: balances,
+        address,
+        isConnected: true,
+        isMiniPay: false,
+        balances,
       };
     } catch (error) {
-      console.error('MiniPay connection error:', error);
-      throw new Error('Failed to connect wallet');
+      console.error('Address connection error:', error);
+      throw error;
     }
   }
 
   /**
-   * Get balances for all supported tokens
+   * Get all token balances
    */
-  async getBalances(address: string): Promise<WalletInfo['balance']> {
-    if (!this.miniPay) {
-      throw new Error('MiniPay not initialized');
+  async getAllBalances(): Promise<WalletState['balances']> {
+    if (!this.walletAddress) {
+      return { CELO: '0', cUSD: '0', USDC: '0', USDT: '0' };
     }
 
     try {
-      const [celo, cusd, usdc, usdt] = await Promise.all([
-        this.miniPay.getBalance(address, 'CELO'),
-        this.miniPay.getBalance(address, 'cUSD'),
-        this.miniPay.getBalance(address, 'USDC'),
-        this.miniPay.getBalance(address, 'USDT'),
+      const provider = this.provider || new ethers.JsonRpcProvider(NETWORK.rpcUrl);
+      
+      const celoBalance = await provider.getBalance(this.walletAddress);
+      
+      const cusdContract = new ethers.Contract(NETWORK.cUSD, ERC20_ABI, provider);
+      const usdcContract = new ethers.Contract(NETWORK.USDC, ERC20_ABI, provider);
+      const usdtContract = new ethers.Contract(NETWORK.USDT, ERC20_ABI, provider);
+      
+      const [cusdBalance, usdcBalance, usdtBalance] = await Promise.all([
+        cusdContract.balanceOf(this.walletAddress),
+        usdcContract.balanceOf(this.walletAddress),
+        usdtContract.balanceOf(this.walletAddress),
       ]);
-
+      
       return {
-        celo: new BigNumber(celo),
-        cusd: new BigNumber(cusd),
-        usdc: new BigNumber(usdc),
-        usdt: new BigNumber(usdt),
+        CELO: ethers.formatEther(celoBalance),
+        cUSD: ethers.formatUnits(cusdBalance, 18),
+        USDC: ethers.formatUnits(usdcBalance, 6),
+        USDT: ethers.formatUnits(usdtBalance, 6),
       };
     } catch (error) {
       console.error('Error fetching balances:', error);
-      throw new Error('Failed to fetch balances');
+      return { CELO: '0', cUSD: '0', USDC: '0', USDT: '0' };
     }
   }
 
   /**
-   * Send transaction via MiniPay
+   * Deposit funds into game contract
    */
-  async sendTransaction(
-    to: string,
-    value: string,
-    token?: 'CELO' | 'cUSD' | 'USDC' | 'USDT',
-    data?: string
-  ): Promise<string> {
-    if (!this.miniPay) {
-      throw new Error('MiniPay not initialized');
-    }
-
+  async deposit(amount: string, token: string = 'CELO'): Promise<string> {
+    if (!this.signer) throw new Error('Wallet not connected for signing');
+    
     try {
-      const txHash = await this.miniPay.sendTransaction({
-        to,
-        value,
-        token: token || 'CELO',
-        data,
-      });
-
-      return txHash;
+      const contract = new ethers.Contract(TRIVIA_CONTRACT, TRIVIA_ABI, this.signer);
+      
+      if (token === 'CELO') {
+        const tx = await contract.deposit({
+          value: ethers.parseEther(amount),
+        });
+        await tx.wait();
+        return tx.hash;
+      } else {
+        const tokenAddress = this.getTokenAddress(token);
+        const decimals = token === 'cUSD' ? 18 : 6;
+        const tokenAmount = ethers.parseUnits(amount, decimals);
+        
+        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, this.signer);
+        const approveTx = await tokenContract.approve(TRIVIA_CONTRACT, tokenAmount);
+        await approveTx.wait();
+        
+        const tx = await contract.depositToken(tokenAddress, tokenAmount);
+        await tx.wait();
+        return tx.hash;
+      }
     } catch (error) {
-      console.error('Transaction error:', error);
-      throw new Error('Transaction failed');
+      console.error('Deposit error:', error);
+      throw error;
     }
   }
 
   /**
-   * Approve token spending
+   * Withdraw funds from game contract
    */
-  async approveToken(
-    token: 'cUSD' | 'USDC' | 'USDT',
-    spender: string,
-    amount: string
-  ): Promise<string> {
-    if (!this.miniPay) {
-      throw new Error('MiniPay not initialized');
-    }
-
+  async withdraw(amount: string, token: string = 'CELO'): Promise<string> {
+    if (!this.signer) throw new Error('Wallet not connected for signing');
+    
     try {
-      const txHash = await this.miniPay.approveToken({
-        token,
-        spender,
-        amount,
-      });
-
-      return txHash;
+      const contract = new ethers.Contract(TRIVIA_CONTRACT, TRIVIA_ABI, this.signer);
+      
+      if (token === 'CELO') {
+        const tx = await contract.withdraw(ethers.parseEther(amount));
+        await tx.wait();
+        return tx.hash;
+      } else {
+        const tokenAddress = this.getTokenAddress(token);
+        const decimals = token === 'cUSD' ? 18 : 6;
+        const tx = await contract.withdrawToken(
+          tokenAddress, 
+          ethers.parseUnits(amount, decimals)
+        );
+        await tx.wait();
+        return tx.hash;
+      }
     } catch (error) {
-      console.error('Token approval error:', error);
-      throw new Error('Token approval failed');
+      console.error('Withdraw error:', error);
+      throw error;
     }
   }
 
   /**
-   * Check if user is authenticated
+   * Get token address by symbol
    */
-  isAuthenticated(): boolean {
-    return this.currentUser !== null && this.currentUser.verified;
+  private getTokenAddress(token: string): string {
+    switch (token.toUpperCase()) {
+      case 'CUSD':
+      case 'cUSD':
+        return NETWORK.cUSD;
+      case 'USDC':
+        return NETWORK.USDC;
+      case 'USDT':
+        return NETWORK.USDT;
+      default:
+        throw new Error(`Unknown token: ${token}`);
+    }
   }
 
-  /**
-   * Get current user
-   */
-  getCurrentUser(): SocialConnectUser | null {
-    return this.currentUser;
+  getAddress(): string | null {
+    return this.walletAddress;
   }
 
-  /**
-   * Disconnect wallet
-   */
+  isConnected(): boolean {
+    return this.walletAddress !== null;
+  }
+
   async disconnect(): Promise<void> {
-    if (this.miniPay) {
-      await this.miniPay.disconnect();
-    }
-    this.currentUser = null;
-  }
-
-  /**
-   * Format phone number for display
-   */
-  formatPhoneNumber(phoneNumber: string): string {
-    // Simple formatting (can be enhanced)
-    if (phoneNumber.startsWith('+')) {
-      return phoneNumber;
-    }
-    return `+${phoneNumber}`;
-  }
-
-  /**
-   * Validate phone number format
-   */
-  validatePhoneNumber(phoneNumber: string): boolean {
-    // Basic validation (E.164 format)
-    const phoneRegex = /^\+[1-9]\d{1,14}$/;
-    return phoneRegex.test(phoneNumber);
+    this.provider = null;
+    this.signer = null;
+    this.walletAddress = null;
+    this.isMiniPay = false;
+    
+    await AsyncStorage.removeItem('walletAddress');
+    await AsyncStorage.removeItem('isMiniPay');
   }
 }
 
 export const miniPayService = new MiniPayService();
 export default miniPayService;
-
