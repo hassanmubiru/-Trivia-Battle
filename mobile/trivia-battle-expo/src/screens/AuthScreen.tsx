@@ -84,17 +84,33 @@ export default function AuthScreen({ navigation }: any) {
 
         <Text style={styles.divider}>OR</Text>
 
-        <Text style={styles.label}>Wallet Address</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="0x..."
-          placeholderTextColor="#666"
-          value={walletAddress}
-          onChangeText={setWalletAddress}
-        />
-        <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={handleWalletConnect}>
-          <Text style={styles.buttonText}>Connect Wallet</Text>
-        </TouchableOpacity>
+        {isMiniPayAvailable ? (
+          <TouchableOpacity 
+            style={[styles.button, styles.buttonMiniPay]} 
+            onPress={handleMiniPayConnect}
+            disabled={isConnecting}
+          >
+            {isConnecting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonTextWhite}>🔗 Connect with MiniPay</Text>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <>
+            <Text style={styles.label}>Wallet Address</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="0x..."
+              placeholderTextColor="#666"
+              value={walletAddress}
+              onChangeText={setWalletAddress}
+            />
+            <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={handleWalletConnect}>
+              <Text style={styles.buttonText}>Connect Wallet</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       <Text style={styles.info}>
