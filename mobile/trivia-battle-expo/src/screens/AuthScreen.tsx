@@ -11,8 +11,8 @@ export default function AuthScreen({ navigation }: any) {
   const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
-    // Check if MiniPay is available
-    setIsMiniPayAvailable(miniPayService.isMiniPayAvailable());
+    // Check if MiniPay is available (in browser/webview environment)
+    setIsMiniPayAvailable(miniPayService.isMiniPayEnvironment());
   }, []);
 
   const handlePhoneLogin = async () => {
@@ -31,14 +31,14 @@ export default function AuthScreen({ navigation }: any) {
   const handleMiniPayConnect = async () => {
     setIsConnecting(true);
     try {
-      const result = await miniPayService.connect();
-      if (result.success && result.address) {
-        await AsyncStorage.setItem('walletAddress', result.address);
-        await AsyncStorage.setItem('walletType', 'minipay');
+      const walletState = await miniPayService.connect();
+      if (walletState.isConnected && walletState.address) {
+        await AsyncStorage.setItem('walletAddress', walletState.address);
+        await AsyncStorage.setItem('walletType', walletState.isMiniPay ? 'minipay' : 'injected');
         await AsyncStorage.setItem('isAuthenticated', 'true');
         navigation.replace('Main');
       } else {
-        Alert.alert('Connection Failed', result.error || 'Could not connect to MiniPay');
+        Alert.alert('Connection Failed', 'Could not connect wallet');
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to connect wallet');
