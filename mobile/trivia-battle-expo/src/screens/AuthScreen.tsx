@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { miniPayService } from '../services/miniPayService';
 
 export default function AuthScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
+  const [isMiniPayAvailable, setIsMiniPayAvailable] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  useEffect(() => {
+    // Check if MiniPay is available
+    setIsMiniPayAvailable(miniPayService.isMiniPayAvailable());
+  }, []);
 
   const handlePhoneLogin = async () => {
     if (phoneNumber.length < 10) {
@@ -20,6 +28,25 @@ export default function AuthScreen({ navigation }: any) {
     navigation.replace('Main');
   };
 
+  const handleMiniPayConnect = async () => {
+    setIsConnecting(true);
+    try {
+      const result = await miniPayService.connect();
+      if (result.success && result.address) {
+        await AsyncStorage.setItem('walletAddress', result.address);
+        await AsyncStorage.setItem('walletType', 'minipay');
+        await AsyncStorage.setItem('isAuthenticated', 'true');
+        navigation.replace('Main');
+      } else {
+        Alert.alert('Connection Failed', result.error || 'Could not connect to MiniPay');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to connect wallet');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
   const handleWalletConnect = async () => {
     if (walletAddress.length < 42) {
       Alert.alert('Error', 'Please enter a valid wallet address');
@@ -28,6 +55,7 @@ export default function AuthScreen({ navigation }: any) {
     
     // Store wallet address
     await AsyncStorage.setItem('walletAddress', walletAddress);
+    await AsyncStorage.setItem('walletType', 'manual');
     await AsyncStorage.setItem('isAuthenticated', 'true');
     
     navigation.replace('Main');
