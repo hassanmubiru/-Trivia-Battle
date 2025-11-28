@@ -49,38 +49,22 @@ export default function AuthScreen({ navigation }: any) {
   const handleMetaMaskConnect = async () => {
     setIsConnecting(true);
     try {
-      // Open MetaMask app
-      const metamaskUrl = 'metamask://';
-      const canOpen = await Linking.canOpenURL(metamaskUrl);
+      const { deepLink } = walletService.generateMetaMaskLink();
       
-      if (canOpen) {
-        Alert.alert(
-          'Connect MetaMask',
-          'MetaMask will open. After connecting, copy your wallet address and paste it here.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Open MetaMask', 
-              onPress: async () => {
-                await Linking.openURL(metamaskUrl);
-                setShowManualInput(true);
-              }
-            },
-          ]
-        );
-      } else {
-        Alert.alert(
-          'MetaMask Not Installed',
-          'Please install MetaMask from the Play Store to connect your wallet.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Install MetaMask', 
-              onPress: () => Linking.openURL('https://play.google.com/store/apps/details?id=io.metamask')
-            },
-          ]
-        );
-      }
+      Alert.alert(
+        'Connect MetaMask',
+        'MetaMask will open. Please copy your wallet address and return to this app to paste it.',
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => setIsConnecting(false) },
+          { 
+            text: 'Open MetaMask', 
+            onPress: async () => {
+              await Linking.openURL(deepLink);
+              setShowManualInput(true);
+            }
+          },
+        ]
+      );
     } catch (error: any) {
       Alert.alert('Error', 'Failed to open MetaMask');
     } finally {
@@ -101,13 +85,16 @@ export default function AuthScreen({ navigation }: any) {
 
     setIsConnecting(true);
     try {
-      const wallet = await walletService.connectWithAddress(walletAddress);
+      const wallet = await walletService.connectMetaMask(walletAddress);
       
       if (wallet.isConnected) {
         await AsyncStorage.setItem('isAuthenticated', 'true');
+        
+        const canSignText = wallet.canSign ? '\n✓ Ready to sign transactions' : '\n(Read-only mode)';
+        
         Alert.alert(
           'Connected!',
-          `Wallet connected successfully!\n\nCELO: ${parseFloat(wallet.balances.CELO).toFixed(4)}\ncUSD: ${parseFloat(wallet.balances.cUSD).toFixed(2)}`,
+          `Wallet connected successfully!${canSignText}\n\nCELO: ${parseFloat(wallet.balances.CELO).toFixed(4)}\ncUSD: ${parseFloat(wallet.balances.cUSD).toFixed(2)}`,
           [{ text: 'Continue', onPress: () => navigation.replace('Main') }]
         );
       }

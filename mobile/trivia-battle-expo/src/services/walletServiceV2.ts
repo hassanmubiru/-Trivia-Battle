@@ -1,6 +1,6 @@
 /**
- * Wallet Service
- * MetaMask connection with transaction signing support
+ * Wallet Service V2
+ * Simplified MetaMask connection via WalletConnect with transaction signing
  * Supports Celo network (Alfajores testnet for development)
  */
 
@@ -36,6 +36,14 @@ const ERC20_ABI = [
   'function approve(address spender, uint256 amount) returns (bool)',
 ];
 
+// TriviaBattle contract ABI
+const TRIVIA_ABI = [
+  'function deposit() payable',
+  'function depositToken(address token, uint256 amount)',
+  'function withdraw(uint256 amount)',
+  'function getBalance(address user) view returns (uint256)',
+];
+
 export interface WalletInfo {
   address: string;
   isConnected: boolean;
@@ -49,11 +57,12 @@ export interface WalletInfo {
   };
 }
 
-class WalletService {
+class WalletServiceV2 {
   private provider: ethers.JsonRpcProvider;
   private walletAddress: string | null = null;
   private connectionType: 'walletconnect' | 'manual' | 'none' = 'none';
   private canSign: boolean = false;
+  private signer: ethers.Signer | null = null;
 
   constructor() {
     // Initialize read-only provider
@@ -65,6 +74,7 @@ class WalletService {
 
   /**
    * Generate WalletConnect deep link for MetaMask
+   * For production, implement full WalletConnect SDK
    */
   generateMetaMaskLink(): { deepLink: string; projectId: string } {
     const projectId = '2aca272d18deb10ff748260da5f78bfd';
@@ -73,8 +83,8 @@ class WalletService {
   }
 
   /**
-   * Connect with MetaMask (via copied address)
-   * Full WalletConnect would automate this
+   * Connect with MetaMask via copied address
+   * (Full WalletConnect would automate this)
    */
   async connectMetaMask(address: string): Promise<WalletInfo> {
     if (!ethers.isAddress(address)) {
@@ -83,7 +93,7 @@ class WalletService {
 
     this.walletAddress = address;
     this.connectionType = 'walletconnect';
-    this.canSign = true; // Assume MetaMask connected
+    this.canSign = true; // Assume connected to MetaMask
     
     await AsyncStorage.setItem('walletAddress', address);
     await AsyncStorage.setItem('connectionType', 'walletconnect');
@@ -109,7 +119,7 @@ class WalletService {
 
     this.walletAddress = address;
     this.connectionType = 'manual';
-    this.canSign = false;
+    this.canSign = false; // Cannot sign in read-only mode
     
     await AsyncStorage.setItem('walletAddress', address);
     await AsyncStorage.setItem('connectionType', 'manual');
@@ -199,7 +209,7 @@ class WalletService {
   }
 
   /**
-   * Send transaction (simulated for now)
+   * Simulate transaction (for demo - real version uses MetaMask signer)
    */
   async sendTransaction(to: string, value: string, data?: string): Promise<string> {
     if (!this.canSign) {
@@ -207,6 +217,12 @@ class WalletService {
     }
 
     try {
+      // In production with real MetaMask connection:
+      // const signer = provider.getSigner();
+      // const tx = await signer.sendTransaction({ to, value: ethers.parseEther(value), data });
+      // return tx.hash;
+
+      // For now, simulate with a transaction hash
       const tx = {
         from: this.walletAddress,
         to,
@@ -216,10 +232,28 @@ class WalletService {
 
       console.log('Transaction ready (would be sent via MetaMask):', tx);
       
-      // Return mock hash for demo
+      // Return mock hash
       return '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
     } catch (error) {
       console.error('Transaction error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Approve token spending
+   */
+  async approveToken(tokenAddress: string, spenderAddress: string, amount: string): Promise<string> {
+    if (!this.canSign) {
+      throw new Error('Cannot approve in read-only mode');
+    }
+
+    try {
+      const contract = new ethers.Contract(tokenAddress, ERC20_ABI, this.signer || this.provider);
+      const tx = await contract.approve(spenderAddress, ethers.parseUnits(amount, 18));
+      return tx.hash;
+    } catch (error) {
+      console.error('Approve error:', error);
       throw error;
     }
   }
@@ -231,6 +265,7 @@ class WalletService {
     this.walletAddress = null;
     this.connectionType = 'none';
     this.canSign = false;
+    this.signer = null;
 
     await AsyncStorage.removeItem('walletAddress');
     await AsyncStorage.removeItem('connectionType');
@@ -286,5 +321,5 @@ class WalletService {
   }
 }
 
-export const walletService = new WalletService();
+export const walletService = new WalletServiceV2();
 export default walletService;
