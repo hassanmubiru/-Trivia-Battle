@@ -1,31 +1,31 @@
 /**
  * Wallet Service
  * MetaMask connection with transaction signing support
- * Supports Celo network (Alfajores testnet for development)
+ * Supports Celo Sepolia testnet
  */
 
 import { ethers } from 'ethers';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Celo Alfajores Testnet configuration
-const CELO_ALFAJORES = {
-  chainId: 44787,
-  chainIdHex: '0xaef3',
-  rpcUrl: 'https://alfajores-forno.celo-testnet.org',
-  name: 'Celo Alfajores',
+// Celo Sepolia Testnet configuration
+const CELO_SEPOLIA = {
+  chainId: 11142220,
+  chainIdHex: '0xaa36a7',
+  rpcUrl: 'https://celo-sepolia-rpc.publicnode.com',
+  name: 'Celo Sepolia',
   symbol: 'CELO',
-  explorer: 'https://alfajores.celoscan.io',
+  explorer: 'https://celo-sepolia.blockscout.com',
 };
 
-// Token addresses on Alfajores
+// Token addresses on Celo Sepolia
 const TOKENS = {
-  cUSD: '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1',
-  USDC: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B',
-  USDT: '0x02De4766C272abc10Bc88c220D214A26960a7e92',
+  cUSD: '0xc2FB5a20d07036d828cBbF2FCEE5cea02cc9Cb2f',
+  USDC: '0x360Da2CcFE307B5CB0330d062d8D83B721811B76',
+  USDT: '0xE5eA34847A04d197B22652be1Dc8FbFf11392239',
 };
 
-// TriviaBattle contract
-const TRIVIA_CONTRACT = '0xE40DE1f269E2aD112c6faeaA3df4ECAf2E512869';
+// TriviaBattle contract on Celo Sepolia
+const TRIVIA_CONTRACT = '0xAbB8c5D478F5FA20e4f8bc719B9B09b67Dd03ECd';
 
 // ERC20 ABI
 const ERC20_ABI = [
@@ -58,8 +58,8 @@ class WalletService {
   constructor() {
     // Initialize read-only provider
     this.provider = new ethers.JsonRpcProvider(
-      CELO_ALFAJORES.rpcUrl,
-      { chainId: CELO_ALFAJORES.chainId, name: CELO_ALFAJORES.name }
+      CELO_SEPOLIA.rpcUrl,
+      { chainId: CELO_SEPOLIA.chainId, name: CELO_SEPOLIA.name }
     );
   }
 
@@ -282,7 +282,7 @@ class WalletService {
    * Get network info
    */
   getNetworkInfo() {
-    return CELO_ALFAJORES;
+    return CELO_SEPOLIA;
   }
 }
 
