@@ -13,6 +13,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { walletService } from '../services/walletService';
+import { miniPayService } from '../services/miniPayService';
 import { ethers } from 'ethers';
 
 export default function AuthScreen({ navigation }: any) {
