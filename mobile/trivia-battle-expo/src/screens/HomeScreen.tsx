@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { walletService } from '../services/walletService';
 
 interface UserStats {
   gamesPlayed: number;
@@ -11,9 +12,11 @@ interface UserStats {
 
 export default function HomeScreen({ navigation }: any) {
   const [balance, setBalance] = useState('0.00');
+  const [cUSDBalance, setCUSDBalance] = useState('0.00');
   const [username, setUsername] = useState('Player');
   const [stats, setStats] = useState<UserStats>({ gamesPlayed: 0, winRate: 0, ranking: 0 });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -23,30 +26,27 @@ export default function HomeScreen({ navigation }: any) {
     try {
       setLoading(true);
       const phone = await AsyncStorage.getItem('userPhone');
-      const wallet = await AsyncStorage.getItem('walletAddress');
       
       if (phone) setUsername(phone.slice(-4));
-      if (wallet) {
-        setUsername(wallet.slice(0, 6) + '...' + wallet.slice(-4));
-        
-        try {
-          // Fetch balance from blockchain
-          const { getWalletBalance, getUserStats } = await import('../services/blockchain');
-          const balanceValue = await getWalletBalance(wallet);
-          setBalance(balanceValue.toFixed(2));
-
-          // Fetch user stats from smart contract
-          const statsData = await getUserStats(wallet);
-          setStats({
-            gamesPlayed: statsData.gamesPlayed,
-            winRate: statsData.winRate,
-            ranking: 0, // Calculate from leaderboard position
-          });
-        } catch (blockchainError) {
-          console.error('Blockchain connection error:', blockchainError);
-          // Set default values if blockchain is unavailable
-          setBalance('0.00');
-          setStats({ gamesPlayed: 0, winRate: 0, ranking: 0 });
+      
+      // Check wallet connection
+      if (walletService.isConnected()) {
+        const address = walletService.getAddress();
+        if (address) {
+          setUsername(address.slice(0, 6) + '...' + address.slice(-4));
+          
+          // Fetch balances
+          const balances = await walletService.getBalances();
+          setBalance(parseFloat(balances.CELO).toFixed(4));
+          setCUSDBalance(parseFloat(balances.cUSD).toFixed(2));
+        }
+      } else {
+        // Try to restore connection
+        const wallet = await walletService.restoreConnection();
+        if (wallet && wallet.isConnected) {
+          setUsername(wallet.address.slice(0, 6) + '...' + wallet.address.slice(-4));
+          setBalance(parseFloat(wallet.balances.CELO).toFixed(4));
+          setCUSDBalance(parseFloat(wallet.balances.cUSD).toFixed(2));
         }
       }
       
@@ -55,6 +55,12 @@ export default function HomeScreen({ navigation }: any) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadUserData();
+    setRefreshing(false);
   };
 
   const startGame = (mode: string, stake: string) => {
@@ -78,7 +84,12 @@ export default function HomeScreen({ navigation }: any) {
         </View>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView 
+        style={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00ff00" />
+        }
+      >
         <Text style={styles.sectionTitle}>Quick Play</Text>
         
         <TouchableOpacity 
@@ -169,15 +180,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#00ff00',
   },
+  balanceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  balanceItem: {
+    flex: 1,
+  },
   balanceLabel: {
     fontSize: 12,
     color: '#999',
     marginBottom: 5,
   },
   balance: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#00ff00',
+  },
+  balanceSecondary: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0088ff',
   },
   content: {
     flex: 1,

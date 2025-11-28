@@ -1,19 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  StyleSheet, 
+  Alert, 
+  ActivityIndicator,
+  Linking,
+  ScrollView,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { miniPayService } from '../services/miniPayService';
+import { walletService } from '../services/walletService';
+import { ethers } from 'ethers';
 
 export default function AuthScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
-  const [isMiniPayAvailable, setIsMiniPayAvailable] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [showManualInput, setShowManualInput] = useState(false);
 
   useEffect(() => {
-    // Check if MiniPay is available (in browser/webview environment)
-    setIsMiniPayAvailable(miniPayService.isMiniPayEnvironment());
+    // Check if already connected
+    checkExistingConnection();
   }, []);
+
+  const checkExistingConnection = async () => {
+    const wallet = await walletService.restoreConnection();
+    if (wallet && wallet.isConnected) {
+      await AsyncStorage.setItem('isAuthenticated', 'true');
+      navigation.replace('Main');
+    }
+  };
 
   const handlePhoneLogin = async () => {
     if (phoneNumber.length < 10) {
@@ -21,24 +40,76 @@ export default function AuthScreen({ navigation }: any) {
       return;
     }
     
-    // Store user data
     await AsyncStorage.setItem('userPhone', phoneNumber);
     await AsyncStorage.setItem('isAuthenticated', 'true');
     
     navigation.replace('Main');
   };
 
-  const handleMiniPayConnect = async () => {
+  const handleMetaMaskConnect = async () => {
     setIsConnecting(true);
     try {
-      const walletState = await miniPayService.connect();
-      if (walletState.isConnected && walletState.address) {
-        await AsyncStorage.setItem('walletAddress', walletState.address);
-        await AsyncStorage.setItem('walletType', walletState.isMiniPay ? 'minipay' : 'injected');
-        await AsyncStorage.setItem('isAuthenticated', 'true');
-        navigation.replace('Main');
+      // Open MetaMask app
+      const metamaskUrl = 'metamask://';
+      const canOpen = await Linking.canOpenURL(metamaskUrl);
+      
+      if (canOpen) {
+        Alert.alert(
+          'Connect MetaMask',
+          'MetaMask will open. After connecting, copy your wallet address and paste it here.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Open MetaMask', 
+              onPress: async () => {
+                await Linking.openURL(metamaskUrl);
+                setShowManualInput(true);
+              }
+            },
+          ]
+        );
       } else {
-        Alert.alert('Connection Failed', 'Could not connect wallet');
+        Alert.alert(
+          'MetaMask Not Installed',
+          'Please install MetaMask from the Play Store to connect your wallet.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Install MetaMask', 
+              onPress: () => Linking.openURL('https://play.google.com/store/apps/details?id=io.metamask')
+            },
+          ]
+        );
+      }
+    } catch (error: any) {
+      Alert.alert('Error', 'Failed to open MetaMask');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleWalletConnect = async () => {
+    if (!walletAddress || walletAddress.length < 42) {
+      Alert.alert('Error', 'Please enter a valid wallet address (0x...)');
+      return;
+    }
+
+    if (!ethers.isAddress(walletAddress)) {
+      Alert.alert('Error', 'Invalid wallet address format');
+      return;
+    }
+
+    setIsConnecting(true);
+    try {
+      const wallet = await walletService.connectWithAddress(walletAddress);
+      
+      if (wallet.isConnected) {
+        await AsyncStorage.setItem('isAuthenticated', 'true');
+        Alert.alert(
+          'Connected!',
+          `Wallet connected successfully!\n\nCELO: ${parseFloat(wallet.balances.CELO).toFixed(4)}\ncUSD: ${parseFloat(wallet.balances.cUSD).toFixed(2)}`,
+          [{ text: 'Continue', onPress: () => navigation.replace('Main') }]
+        );
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to connect wallet');
@@ -47,29 +118,56 @@ export default function AuthScreen({ navigation }: any) {
     }
   };
 
-  const handleWalletConnect = async () => {
-    if (walletAddress.length < 42) {
-      Alert.alert('Error', 'Please enter a valid wallet address');
-      return;
-    }
-    
-    // Store wallet address
-    await AsyncStorage.setItem('walletAddress', walletAddress);
-    await AsyncStorage.setItem('walletType', 'manual');
-    await AsyncStorage.setItem('isAuthenticated', 'true');
-    
-    navigation.replace('Main');
-  };
-
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <StatusBar style="light" />
       
       <Text style={styles.title}>Trivia Battle</Text>
       <Text style={styles.subtitle}>Test Your Knowledge, Earn Crypto</Text>
 
       <View style={styles.loginBox}>
-        <Text style={styles.label}>Phone Number</Text>
+        {/* MetaMask Connection */}
+        <TouchableOpacity 
+          style={[styles.button, styles.buttonMetaMask]} 
+          onPress={handleMetaMaskConnect}
+          disabled={isConnecting}
+        >
+          {isConnecting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonTextWhite}>🦊 Connect with MetaMask</Text>
+          )}
+        </TouchableOpacity>
+
+        <Text style={styles.divider}>OR</Text>
+
+        {/* Manual Wallet Input */}
+        <Text style={styles.label}>Wallet Address</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="0x..."
+          placeholderTextColor="#666"
+          value={walletAddress}
+          onChangeText={setWalletAddress}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <TouchableOpacity 
+          style={[styles.button, styles.buttonSecondary]} 
+          onPress={handleWalletConnect}
+          disabled={isConnecting}
+        >
+          {isConnecting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Connect Wallet</Text>
+          )}
+        </TouchableOpacity>
+
+        <Text style={styles.divider}>OR</Text>
+
+        {/* Phone Login */}
+        <Text style={styles.label}>Phone Number (Demo Mode)</Text>
         <TextInput
           style={styles.input}
           placeholder="+256 XXX XXX XXX"
@@ -78,58 +176,35 @@ export default function AuthScreen({ navigation }: any) {
           value={phoneNumber}
           onChangeText={setPhoneNumber}
         />
-        <TouchableOpacity style={styles.button} onPress={handlePhoneLogin}>
+        <TouchableOpacity style={[styles.button, styles.buttonGreen]} onPress={handlePhoneLogin}>
           <Text style={styles.buttonText}>Login with Phone</Text>
         </TouchableOpacity>
+      </View>
 
-        <Text style={styles.divider}>OR</Text>
-
-        {isMiniPayAvailable ? (
-          <TouchableOpacity 
-            style={[styles.button, styles.buttonMiniPay]} 
-            onPress={handleMiniPayConnect}
-            disabled={isConnecting}
-          >
-            {isConnecting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonTextWhite}>🔗 Connect with MiniPay</Text>
-            )}
-          </TouchableOpacity>
-        ) : (
-          <>
-            <Text style={styles.label}>Wallet Address</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0x..."
-              placeholderTextColor="#666"
-              value={walletAddress}
-              onChangeText={setWalletAddress}
-            />
-            <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={handleWalletConnect}>
-              <Text style={styles.buttonText}>Connect Wallet</Text>
-            </TouchableOpacity>
-          </>
-        )}
+      <View style={styles.networkInfo}>
+        <Text style={styles.networkText}>🔗 Network: Celo Alfajores Testnet</Text>
+        <Text style={styles.networkText}>Get test CELO from faucet.celo.org</Text>
       </View>
 
       <Text style={styles.info}>
         Play trivia games, compete with others, and earn rewards on Celo blockchain
       </Text>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: '#1a1a1a',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
+    paddingTop: 60,
+    paddingBottom: 40,
   },
   title: {
-    fontSize: 48,
+    fontSize: 42,
     fontWeight: 'bold',
     color: '#00ff00',
     marginBottom: 10,
@@ -137,7 +212,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#999',
-    marginBottom: 40,
+    marginBottom: 30,
   },
   loginBox: {
     width: '100%',
@@ -169,11 +244,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 15,
   },
+  buttonGreen: {
+    backgroundColor: '#00ff00',
+  },
   buttonSecondary: {
     backgroundColor: '#0088ff',
   },
-  buttonMiniPay: {
-    backgroundColor: '#FCFF52',
+  buttonMetaMask: {
+    backgroundColor: '#F6851B',
   },
   buttonText: {
     color: '#000',
@@ -181,18 +259,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   buttonTextWhite: {
-    color: '#000',
+    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
   divider: {
     textAlign: 'center',
     color: '#666',
-    marginVertical: 20,
+    marginVertical: 15,
     fontSize: 14,
   },
+  networkInfo: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  networkText: {
+    color: '#666',
+    fontSize: 12,
+    marginTop: 5,
+  },
   info: {
-    marginTop: 30,
+    marginTop: 20,
     textAlign: 'center',
     color: '#666',
     fontSize: 12,
