@@ -206,7 +206,7 @@ export class MetaMaskService {
     value: string,
     data?: string
   ): Promise<string> {
-    if (!this.ethereum || !this.address || !this.provider) {
+    if (!this.ethereum || !this.address) {
       throw new Error('Not connected to MetaMask');
     }
 
@@ -218,19 +218,9 @@ export class MetaMaskService {
         throw new Error('Invalid recipient address');
       }
 
-      // Get gas price and estimate gas
-      const gasPrice = await this.provider.getGasPrice();
       const valueInWei = ethers.parseEther(value);
 
-      // Estimate gas
-      const estimatedGas = await this.provider.estimateGas({
-        from: this.address,
-        to: to,
-        value: valueInWei,
-        data: data || '0x',
-      });
-
-      // Send transaction
+      // Send transaction via injected ethereum
       const txHash = await this.ethereum.request({
         method: 'eth_sendTransaction',
         params: [
@@ -238,8 +228,6 @@ export class MetaMaskService {
             from: this.address,
             to: to,
             value: ethers.toBeHex(valueInWei),
-            gas: ethers.toBeHex(estimatedGas),
-            gasPrice: ethers.toBeHex(gasPrice),
             data: data || '0x',
           },
         ],
@@ -297,20 +285,20 @@ export class MetaMaskService {
    * Switch network to Celo Sepolia
    */
   async switchNetwork(): Promise<void> {
-    if (!this.provider) {
+    if (!this.ethereum) {
       throw new Error('Provider not initialized');
     }
 
     try {
       console.log('[MetaMask] Switching to Celo Sepolia...');
-      
-      await (this.provider as any).ethereum.request({
+
+      await this.ethereum.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: '0x2ae28' }], // 11142220 in hex
       });
 
-      console.log('[MetaMask] Switched to Celo Sepolia');
       this.chainId = 11142220;
+      console.log('[MetaMask] Switched to Celo Sepolia');
     } catch (error: any) {
       if (error.code === 4902) {
         // Network not found, add it
@@ -326,14 +314,14 @@ export class MetaMaskService {
    * Add Celo Sepolia network to MetaMask
    */
   private async addNetwork(): Promise<void> {
-    if (!this.provider) {
+    if (!this.ethereum) {
       throw new Error('Provider not initialized');
     }
 
     try {
       console.log('[MetaMask] Adding Celo Sepolia network...');
-      
-      await (this.provider as any).ethereum.request({
+
+      await this.ethereum.request({
         method: 'wallet_addEthereumChain',
         params: [
           {
@@ -361,32 +349,26 @@ export class MetaMaskService {
    * Setup event listeners for MetaMask events
    */
   private setupEventListeners(): void {
-    if (!this.provider) return;
+    if (!this.ethereum) return;
 
-    const ethereum = (this.provider as any).ethereum;
-
-    if (ethereum?.on) {
-      ethereum.on('accountsChanged', (accounts: string[]) => {
+    if (this.ethereum.on) {
+      this.ethereum.on('accountsChanged', (accounts: string[]) => {
         console.log('[MetaMask] Accounts changed:', accounts);
         this.address = accounts[0] || null;
         this.emit('accountsChanged', accounts);
       });
 
-      ethereum.on('chainChanged', (chainId: string) => {
+      this.ethereum.on('chainChanged', (chainId: string) => {
         console.log('[MetaMask] Chain changed:', chainId);
         this.chainId = parseInt(chainId, 16);
         this.emit('chainChanged', this.chainId);
       });
 
-      ethereum.on('disconnect', () => {
+      this.ethereum.on('disconnect', () => {
         console.log('[MetaMask] Disconnected');
         this.address = null;
         this.signer = null;
         this.emit('disconnected', null);
-      });
-
-      ethereum.on('connect', () => {
-        console.log('[MetaMask] Connected');
       });
     }
   }
