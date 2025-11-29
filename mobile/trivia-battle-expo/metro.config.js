@@ -1,10 +1,18 @@
-const { getDefaultConfig, mergeConfig } = require('expo/metro-config');
+const { getDefaultConfig } = require('expo/metro-config');
 const nodeLibsReactNative = require('node-libs-react-native');
 
 const defaultConfig = getDefaultConfig(__dirname);
 
-const config = {
+module.exports = {
+  ...defaultConfig,
+  resolver: {
+    ...defaultConfig.resolver,
+    extraNodeModules: {
+      ...nodeLibsReactNative,
+    },
+  },
   transformer: {
+    ...defaultConfig.transformer,
     getTransformOptions: async () => ({
       transform: {
         experimentalImportSupport: false,
@@ -12,11 +20,4 @@ const config = {
       },
     }),
   },
-  resolver: {
-    extraNodeModules: {
-      ...nodeLibsReactNative,
-    },
-  },
 };
-
-module.exports = mergeConfig(defaultConfig, config);
