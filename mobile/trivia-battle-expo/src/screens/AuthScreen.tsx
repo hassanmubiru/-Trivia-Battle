@@ -50,36 +50,46 @@ export default function AuthScreen({ navigation }: any) {
   const handleMetaMaskConnect = async () => {
     setIsConnecting(true);
     try {
-      // Try to connect via injected provider (MetaMask, MiniPay, etc.)
-      const wallet = await walletService.connectWithProvider();
+      // On mobile devices, injected providers (like MetaMask's window.ethereum)
+      // are not available in Expo/React Native environments.
+      // 
+      // Users have two options:
+      // 1. Use MiniPay (Celo-native wallet) - Best for Celo
+      // 2. Enter their wallet address manually for read-only access
+      // 
+      // In a production app, you would implement WalletConnect v2 for full mobile support
       
-      if (wallet.isConnected) {
-        await AsyncStorage.setItem('isAuthenticated', 'true');
-        
-        const signingCapability = wallet.canSign ? '✓ Ready to sign transactions' : '(Read-only mode)';
-        
-        Alert.alert(
-          '✓ Wallet Connected!',
-          `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}\n${signingCapability}\n\nCELO: ${parseFloat(wallet.balances.CELO).toFixed(4)}\ncUSD: ${parseFloat(wallet.balances.cUSD).toFixed(2)}`,
-          [{ text: 'Play Games', onPress: () => navigation.replace('Main') }]
-        );
-      }
+      Alert.alert(
+        'MetaMask on Mobile',
+        'In Expo/React Native, direct MetaMask injection is not available.\n\n' +
+        'We recommend:\n\n' +
+        '1. Use MiniPay (best for Celo) - tap "Connect with MiniPay" above\n\n' +
+        '2. Enter your address manually for read-only access\n\n' +
+        'For production, implement WalletConnect v2 for full mobile signing support.',
+        [
+          {
+            text: 'Try MiniPay',
+            onPress: () => {
+              setIsConnecting(false);
+              handleMiniPayConnect();
+            },
+          },
+          {
+            text: 'Enter Address',
+            onPress: () => {
+              setIsConnecting(false);
+              setShowManualInput(true);
+            },
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => setIsConnecting(false),
+          },
+        ]
+      );
     } catch (error: any) {
-      // If injected provider not available or user rejected, show manual input
-      if (error.message.includes('No Web3 wallet provider') || error.code === 4001) {
-        Alert.alert(
-          'No Wallet Provider Detected',
-          'MetaMask or another Web3 wallet not available. You can still enter your wallet address for read-only access, but you won\'t be able to sign transactions.\n\nFor full functionality, install MetaMask or open this app in MiniPay.',
-          [
-            { text: 'Install MetaMask', onPress: () => Linking.openURL('https://metamask.io') },
-            { text: 'Enter Address Anyway', onPress: () => setShowManualInput(true) },
-            { text: 'Cancel', style: 'cancel', onPress: () => setIsConnecting(false) },
-          ]
-        );
-      } else {
-        Alert.alert('Connection Error', error.message || 'Failed to connect wallet');
-      }
-    } finally {
+      Alert.alert('Error', error.message || 'Connection failed');
       setIsConnecting(false);
     }
   };
@@ -189,9 +199,9 @@ export default function AuthScreen({ navigation }: any) {
             <View style={styles.dividerLine} />
           </View>
 
-          {/* MetaMask Button */}
+          {/* Manual Wallet Connection Button */}
           <Button
-            title="🦊 Connect MetaMask / Wallet"
+            title="🦊 Manual Wallet Entry"
             onPress={handleMetaMaskConnect}
             disabled={isConnecting}
             loading={isConnecting}
