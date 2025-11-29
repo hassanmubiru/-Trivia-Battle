@@ -154,7 +154,7 @@ export default function AuthScreen({ navigation }: any) {
           <Button
             title="📱 Connect with MiniPay (Celo)"
             onPress={handleMiniPayConnect}
-            disabled={walletConnect.isConnecting}
+            disabled={false}
             loading={false}
             variant="secondary"
             size="lg"
