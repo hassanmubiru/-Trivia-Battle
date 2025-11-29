@@ -40,8 +40,6 @@ export default function AuthScreen({ navigation }: any) {
           await AsyncStorage.setItem('walletType', 'walletconnect');
           await AsyncStorage.setItem('isAuthenticated', 'true');
           
-          setQrUri(null); // Clear QR after connection
-          
           Alert.alert(
             '✓ Connected!',
             `Wallet: ${walletConnect.address.slice(0, 6)}...${walletConnect.address.slice(-4)}`,
