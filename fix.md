@@ -1,17 +1,131 @@
-You are a seasoned React Native developer with extensive experience in designing and implementing professional, user-friendly mobile application interfaces. I seek your expertise to enhance the current app’s UI to achieve a polished, modern, and intuitive appearance that aligns with best industry standards.
+# Connect to MetaMask using React Native
 
-Please address the following aspects in your approach:
+Get started with MetaMask SDK in your React Native or Expo dapp.
 
-- UI Assessment: Conduct a thorough evaluation of the existing interface to identify elements that appear unprofessional or outdated.
 
-- Design Consistency: Ensure cohesive styling across all screens, including typography, color schemes, spacing, and component usage.
+## Steps​
 
-- User Experience Enhancement: Improve navigation flow, responsiveness, and accessibility to provide a seamless user journey.
 
-- Component Optimization: Utilize or develop reusable, performant React Native components adhering to current design frameworks or guidelines (e.g., Material Design, Human Interface Guidelines).
+### 1. Create a new project​
 
-- Visual Hierarchy: Apply effective layout techniques to highlight key actions and information clearly.
+Create a new React Native or Expo project using the following commands:
 
-- Performance Considerations: Optimize UI rendering and resource management to maintain smooth app performance.
+```
+npx react-native@latest init MyProject
 
-Leverage your deep React Native UI/UX expertise to deliver a refined, professional interface that significantly elevates the app’s visual appeal and usability.
+```
+
+
+### 2. Install dependencies​
+
+Install the SDK and its dependencies using the following commands:
+
+```
+npm install eciesjs @metamask/sdk-react ethers@5.7.2 @react-native-async-storage/async-storage node-libs-react-native react-native-background-timer react-native-randombytes react-native-url-polyfill react-native-get-random-values
+
+```
+
+
+### 3. Configure Metro​
+
+If you're using Expo, run the following command to create a default Metro configuration file:
+
+```
+npx expo customize metro.config.js
+
+```
+
+In React Native or Expo, update the default Metro configuration file to the following:
+
+```
+const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config")
+
+const defaultConfig = getDefaultConfig(__dirname)
+
+const config = {
+  transformer: {
+    getTransformOptions: async () => ({
+      transform: {
+        experimentalImportSupport: false,
+        inlineRequires: true,
+      },
+    }),
+  },
+  resolver: {
+    extraNodeModules: {
+      ...require("node-libs-react-native"),
+    },
+  },
+}
+
+module.exports = mergeConfig(defaultConfig, config)
+
+```
+
+
+### 4. Add required imports​
+
+Add the following import statements to the React Native or Expo entry file:
+
+```
+import "node-libs-react-native/globals"
+import "react-native-url-polyfill/auto"
+import "react-native-get-random-values"
+
+```
+
+
+### 5. Build and run​
+
+Run the React Native or Expo project on Android or iOS using the following commands:
+
+```
+npx react-native run-android
+npx react-native run-ios
+
+```
+
+
+### 6. Use the SDK​
+
+Initialize and use the SDK in your React Native or Expo project using the `useSDK` hook.
+For example:
+
+```
+import { useSDK } from "@metamask/sdk-react"
+
+function App() {
+  const { account, chainId, ethereum, sdk } = useSDK()
+
+  // Connect to MetaMask
+  const connectWallet = async () => {
+    try {
+      await sdk?.connect()
+    } catch (error) {
+      console.error("Failed to connect wallet:", error)
+    }
+  }
+
+  // Handle state changes
+  useEffect(() => {
+    if (account && chainId) {
+      // Handle account and network changes
+    }
+  }, [account, chainId])
+
+  // Disconnect wallet
+  const disconnectWallet = async () => {
+    await sdk?.terminate()
+  }
+
+  return (
+    // Your app UI
+  )
+}
+
+```
+
+
+## Example​
+
+See the [React Native demo](https://github.com/MetaMask/metamask-sdk/tree/main/packages/examples/reactNativeDemo) on GitHub for more information.
