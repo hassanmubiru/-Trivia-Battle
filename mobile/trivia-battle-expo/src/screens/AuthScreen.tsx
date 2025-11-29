@@ -2,19 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
-  TextInput, 
-  TouchableOpacity, 
+  ScrollView, 
   StyleSheet, 
-  Alert, 
-  ActivityIndicator,
+  Alert,
   Linking,
-  ScrollView,
+  StatusBar as RNStatusBar,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { walletService } from '../services/walletService';
 import { miniPayService } from '../services/miniPayService';
 import { ethers } from 'ethers';
+import { Button, Card, Input } from '../components';
+import { Colors, Typography, Spacing, BorderRadius } from '../constants/theme';
 
 export default function AuthScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber] = useState('');
