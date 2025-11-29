@@ -1,6 +1,5 @@
 import { ethers } from 'ethers';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Linking from 'expo-linking';
 
 export interface WalletInfo {
   address: string;
@@ -402,12 +401,11 @@ export class MetaMaskService {
    */
   private openMetaMaskApp(): void {
     try {
-      const deepLink = 'metamask://';
-      Linking.openURL(deepLink).catch((error) => {
-        console.error('[MetaMask] Failed to open app:', error);
-      });
+      // In React Native with MetaMask, the app should already be available
+      // This is just a fallback message
+      console.log('[MetaMask] Please use your MetaMask app to complete the transaction');
     } catch (error) {
-      console.error('[MetaMask] Deep link error:', error);
+      console.error('[MetaMask] Error:', error);
     }
   }
 
