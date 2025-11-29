@@ -50,24 +50,35 @@ export default function AuthScreen({ navigation }: any) {
   const handleMetaMaskConnect = async () => {
     setIsConnecting(true);
     try {
-      const { deepLink } = walletService.generateMetaMaskLink();
+      // Try to connect via injected provider (MetaMask, MiniPay, etc.)
+      const wallet = await walletService.connectWithProvider();
       
-      Alert.alert(
-        'Connect MetaMask',
-        'MetaMask will open. Please copy your wallet address and return to this app to paste it.',
-        [
-          { text: 'Cancel', style: 'cancel', onPress: () => setIsConnecting(false) },
-          { 
-            text: 'Open MetaMask', 
-            onPress: async () => {
-              await Linking.openURL(deepLink);
-              setShowManualInput(true);
-            }
-          },
-        ]
-      );
+      if (wallet.isConnected) {
+        await AsyncStorage.setItem('isAuthenticated', 'true');
+        
+        const signingCapability = wallet.canSign ? '✓ Ready to sign transactions' : '(Read-only mode)';
+        
+        Alert.alert(
+          '✓ Wallet Connected!',
+          `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}\n${signingCapability}\n\nCELO: ${parseFloat(wallet.balances.CELO).toFixed(4)}\ncUSD: ${parseFloat(wallet.balances.cUSD).toFixed(2)}`,
+          [{ text: 'Play Games', onPress: () => navigation.replace('Main') }]
+        );
+      }
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to open MetaMask');
+      // If injected provider not available or user rejected, show manual input
+      if (error.message.includes('No Web3 wallet provider') || error.code === 4001) {
+        Alert.alert(
+          'No Wallet Provider Detected',
+          'MetaMask or another Web3 wallet not available. You can still enter your wallet address for read-only access, but you won\'t be able to sign transactions.\n\nFor full functionality, install MetaMask or open this app in MiniPay.',
+          [
+            { text: 'Install MetaMask', onPress: () => Linking.openURL('https://metamask.io') },
+            { text: 'Enter Address Anyway', onPress: () => setShowManualInput(true) },
+            { text: 'Cancel', style: 'cancel', onPress: () => setIsConnecting(false) },
+          ]
+        );
+      } else {
+        Alert.alert('Connection Error', error.message || 'Failed to connect wallet');
+      }
     } finally {
       setIsConnecting(false);
     }
@@ -126,9 +137,13 @@ export default function AuthScreen({ navigation }: any) {
       if (wallet.isConnected) {
         await AsyncStorage.setItem('isAuthenticated', 'true');
         
+        const warningText = wallet.canSign 
+          ? '✓ Ready to sign transactions' 
+          : '⚠️ Read-only mode\n(Cannot sign transactions without MetaMask)';
+        
         Alert.alert(
-          '✓ Connected!',
-          `Wallet: ${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}\n✓ Ready to sign transactions\n\nCELO: ${parseFloat(wallet.balances.CELO).toFixed(4)}\ncUSD: ${parseFloat(wallet.balances.cUSD).toFixed(2)}`,
+          '✓ Address Connected!',
+          `Wallet: ${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}\n${warningText}\n\nCELO: ${parseFloat(wallet.balances.CELO).toFixed(4)}\ncUSD: ${parseFloat(wallet.balances.cUSD).toFixed(2)}`,
           [{ text: 'Play Games', onPress: () => navigation.replace('Main') }]
         );
       }
@@ -171,15 +186,15 @@ export default function AuthScreen({ navigation }: any) {
           {isConnecting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonTextWhite}>🦊 Connect with MetaMask</Text>
+            <Text style={styles.buttonTextWhite}>🦊 Connect MetaMask / Wallet</Text>
           )}
         </TouchableOpacity>
 
         <Text style={styles.divider}>OR</Text>
 
-        {/* Manual Wallet Input - Now with Real Signing */}
-        <Text style={styles.label}>Connect Wallet Address</Text>
-        <Text style={styles.sublabel}>Enter your wallet to enable transactions</Text>
+        {/* Manual Wallet Address - Read-Only Fallback */}
+        <Text style={styles.label}>Manual Address (Read-Only)</Text>
+        <Text style={styles.sublabel}>Enter wallet address without signing capability</Text>
         <TextInput
           style={styles.input}
           placeholder="0x..."

@@ -49,14 +49,23 @@ export interface WalletInfo {
   };
 }
 
+interface InjectedProvider {
+  request: (args: { method: string; params?: any[] }) => Promise<any>;
+  isMetaMask?: boolean;
+  isMiniPay?: boolean;
+  on?: (event: string, handler: (...args: any[]) => void) => void;
+}
+
 class WalletService {
-  private provider: ethers.JsonRpcProvider;
+  private provider: ethers.JsonRpcProvider | ethers.BrowserProvider;
   private walletAddress: string | null = null;
   private connectionType: 'walletconnect' | 'manual' | 'none' = 'none';
   private canSign: boolean = false;
+  private signer: ethers.Signer | null = null;
+  private injectedProvider: InjectedProvider | null = null;
 
   constructor() {
-    // Initialize read-only provider
+    // Initialize read-only provider by default
     this.provider = new ethers.JsonRpcProvider(
       CELO_SEPOLIA.rpcUrl,
       { chainId: CELO_SEPOLIA.chainId, name: CELO_SEPOLIA.name }
@@ -64,7 +73,90 @@ class WalletService {
   }
 
   /**
-   * Generate WalletConnect deep link for MetaMask
+   * Check if wallet provider is available (MetaMask, MiniPay, etc.)
+   */
+  hasInjectedProvider(): boolean {
+    if (typeof window !== 'undefined' && (window as any).ethereum) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Request account connection from injected provider
+   */
+  async requestAccount(): Promise<string> {
+    if (!this.hasInjectedProvider()) {
+      throw new Error('No Web3 wallet provider detected. Please install MetaMask or use MiniPay.');
+    }
+
+    try {
+      const injected = (window as any).ethereum as InjectedProvider;
+      const accounts = await injected.request({ method: 'eth_requestAccounts' });
+      
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No accounts found. Please unlock your wallet.');
+      }
+
+      return accounts[0];
+    } catch (error: any) {
+      if (error.code === 4001) {
+        throw new Error('User rejected the connection request');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Connect with injected provider (MetaMask, MiniPay, etc.)
+   * This enables real signing capability
+   */
+  async connectWithProvider(): Promise<WalletInfo> {
+    try {
+      const address = await this.requestAccount();
+      
+      if (!ethers.isAddress(address)) {
+        throw new Error('Invalid wallet address returned from provider');
+      }
+
+      const injected = (window as any).ethereum as InjectedProvider;
+      this.provider = new ethers.BrowserProvider(injected);
+      this.signer = await this.provider.getSigner();
+      this.walletAddress = address;
+      this.injectedProvider = injected;
+      
+      // Determine connection type
+      if (injected.isMiniPay) {
+        this.connectionType = 'walletconnect';
+      } else if (injected.isMetaMask) {
+        this.connectionType = 'walletconnect';
+      } else {
+        this.connectionType = 'walletconnect';
+      }
+      
+      this.canSign = true;
+      
+      await AsyncStorage.setItem('walletAddress', address);
+      await AsyncStorage.setItem('connectionType', this.connectionType);
+      await AsyncStorage.setItem('hasRealSigner', 'true');
+
+      const balances = await this.getBalances();
+
+      return {
+        address,
+        isConnected: true,
+        connectionType: this.connectionType,
+        canSign: true,
+        balances,
+      };
+    } catch (error) {
+      console.error('Provider connection error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate WalletConnect deep link for MetaMask (fallback if no injection)
    */
   generateMetaMaskLink(): { deepLink: string; projectId: string } {
     const projectId = '2aca272d18deb10ff748260da5f78bfd';
@@ -73,70 +165,80 @@ class WalletService {
   }
 
   /**
-   * Connect with MetaMask (via copied address)
-   * Full WalletConnect would automate this
+   * Connect with MetaMask via injected provider
+   * This is now the preferred method when MetaMask is available
    */
-  async connectMetaMask(address: string): Promise<WalletInfo> {
-    if (!ethers.isAddress(address)) {
-      throw new Error('Invalid wallet address');
+  async connectMetaMask(address?: string): Promise<WalletInfo> {
+    // Try to connect via injected provider first
+    if (this.hasInjectedProvider()) {
+      try {
+        return await this.connectWithProvider();
+      } catch (error) {
+        console.warn('Failed to connect via injected provider:', error);
+        // Fall through to manual address method if provided
+      }
     }
 
-    this.walletAddress = address;
-    this.connectionType = 'walletconnect';
-    this.canSign = true; // Assume MetaMask connected
-    
-    await AsyncStorage.setItem('walletAddress', address);
-    await AsyncStorage.setItem('connectionType', 'walletconnect');
+    // Fallback: use provided address if given
+    if (address) {
+      if (!ethers.isAddress(address)) {
+        throw new Error('Invalid wallet address');
+      }
 
-    const balances = await this.getBalances();
+      this.walletAddress = address;
+      this.connectionType = 'walletconnect';
+      this.canSign = false; // Can't sign without injected provider
+      this.signer = null;
+      
+      await AsyncStorage.setItem('walletAddress', address);
+      await AsyncStorage.setItem('connectionType', 'walletconnect');
+      await AsyncStorage.removeItem('hasRealSigner');
 
-    return {
-      address,
-      isConnected: true,
-      connectionType: 'walletconnect',
-      canSign: true,
-      balances,
-    };
-  }
+      const balances = await this.getBalances();
 
-  /**
-   * Connect with a wallet address (read-only mode)
-   */
-  async connectWithAddress(address: string): Promise<WalletInfo> {
-    if (!ethers.isAddress(address)) {
-      throw new Error('Invalid wallet address');
+      return {
+        address,
+        isConnected: true,
+        connectionType: 'walletconnect',
+        canSign: false,
+        balances,
+      };
     }
 
-    this.walletAddress = address;
-    this.connectionType = 'manual';
-    this.canSign = true; // Enable signing for manual input
-    
-    await AsyncStorage.setItem('walletAddress', address);
-    await AsyncStorage.setItem('connectionType', 'manual');
-
-    const balances = await this.getBalances();
-
-    return {
-      address,
-      isConnected: true,
-      connectionType: 'manual',
-      canSign: true,
-      balances,
-    };
+    throw new Error('No wallet provider available and no address provided');
   }
 
   /**
    * Restore previous connection
+   * If connected with real signer, attempt to reconnect with provider
    */
   async restoreConnection(): Promise<WalletInfo | null> {
     try {
       const address = await AsyncStorage.getItem('walletAddress');
       const type = (await AsyncStorage.getItem('connectionType')) as 'walletconnect' | 'manual' | null;
+      const hasRealSigner = await AsyncStorage.getItem('hasRealSigner');
 
       if (address && ethers.isAddress(address)) {
         this.walletAddress = address;
         this.connectionType = type || 'manual';
-        this.canSign = true; // All manual connections can sign
+        
+        // Try to restore signer if previously connected with provider
+        if (hasRealSigner === 'true' && this.hasInjectedProvider()) {
+          try {
+            const injected = (window as any).ethereum as InjectedProvider;
+            this.provider = new ethers.BrowserProvider(injected);
+            this.signer = await this.provider.getSigner();
+            this.canSign = true;
+            this.injectedProvider = injected;
+          } catch (error) {
+            console.warn('Could not restore provider connection:', error);
+            this.canSign = false;
+            this.signer = null;
+          }
+        } else {
+          this.canSign = false;
+          this.signer = null;
+        }
         
         const balances = await this.getBalances();
         
@@ -144,7 +246,7 @@ class WalletService {
           address,
           isConnected: true,
           connectionType: this.connectionType,
-          canSign: true,
+          canSign: this.canSign,
           balances,
         };
       }
@@ -199,11 +301,12 @@ class WalletService {
   }
 
   /**
-   * Send transaction (uses ethers.js with real signer)
+   * Send transaction with real signing via provider
+   * Throws error if wallet doesn't support signing
    */
   async sendTransaction(to: string, value: string, data?: string): Promise<string> {
-    if (!this.canSign) {
-      throw new Error('Cannot sign transactions - wallet not connected for signing');
+    if (!this.canSign || !this.signer) {
+      throw new Error('Wallet connected in read-only mode. Cannot sign transactions. Please connect with MetaMask or MiniPay for transaction support.');
     }
 
     if (!this.walletAddress) {
@@ -213,74 +316,61 @@ class WalletService {
     try {
       // Build transaction
       const tx = {
-        from: this.walletAddress,
         to,
         value: ethers.parseEther(value),
         data: data || '0x',
-        gasLimit: 100000,
       };
 
-      // Estimate gas
-      try {
-        const gasEstimate = await this.provider.estimateGas(tx);
-        tx.gasLimit = gasEstimate * BigInt(120) / BigInt(100); // 20% buffer
-      } catch (err) {
-        console.warn('Gas estimation failed, using default:', err);
+      // Send transaction via signer
+      const txResponse = await this.signer.sendTransaction(tx);
+      console.log('Transaction sent:', txResponse.hash);
+      
+      // Wait for confirmation
+      const receipt = await txResponse.wait();
+      if (!receipt) {
+        throw new Error('Transaction failed - no receipt');
       }
 
-      // Get gas price
-      const feeData = await this.provider.getFeeData();
-      if (feeData.gasPrice) {
-        (tx as any).gasPrice = feeData.gasPrice;
-      }
-
-      console.log('Transaction prepared:', tx);
-      
-      // In production, this would be signed by the wallet provider
-      // For now, return a mock hash with transaction data stored
-      const txHash = '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-      
-      // Store transaction for reference
-      await AsyncStorage.setItem(`tx_${txHash}`, JSON.stringify({
-        ...tx,
-        hash: txHash,
-        timestamp: new Date().toISOString(),
-      }));
-
-      return txHash;
-    } catch (error) {
+      console.log('Transaction confirmed:', receipt.hash);
+      return receipt.hash;
+    } catch (error: any) {
       console.error('Transaction error:', error);
+      if (error.code === 'ACTION_REJECTED') {
+        throw new Error('User rejected the transaction');
+      }
       throw error;
     }
   }
 
   /**
-   * Approve token spending (for game deposits)
+   * Approve token spending with real signing
+   * Throws error if wallet doesn't support signing
    */
   async approveToken(tokenAddress: string, spenderAddress: string, amount: string): Promise<string> {
-    if (!this.canSign) {
-      throw new Error('Cannot approve - wallet not connected for signing');
+    if (!this.canSign || !this.signer) {
+      throw new Error('Wallet connected in read-only mode. Cannot sign transactions. Please connect with MetaMask or MiniPay.');
     }
 
     try {
-      const contract = new ethers.Contract(tokenAddress, ERC20_ABI, this.provider);
+      const contract = new ethers.Contract(tokenAddress, ERC20_ABI, this.signer);
       
-      // Build approval transaction
-      const tx = {
-        to: tokenAddress,
-        data: contract.interface.encodeFunctionData('approve', [
-          spenderAddress,
-          ethers.parseUnits(amount, 18),
-        ]),
-      };
+      // Send approval transaction via signer
+      const tx = await contract.approve(spenderAddress, ethers.parseUnits(amount, 18));
+      console.log('Approval transaction sent:', tx.hash);
+      
+      // Wait for confirmation
+      const receipt = await tx.wait();
+      if (!receipt) {
+        throw new Error('Approval failed - no receipt');
+      }
 
-      console.log('Approval transaction prepared:', tx);
-      
-      // Return mock hash
-      const txHash = '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-      return txHash;
-    } catch (error) {
-      console.error('Approve error:', error);
+      console.log('Approval confirmed:', receipt.hash);
+      return receipt.hash;
+    } catch (error: any) {
+      console.error('Approval error:', error);
+      if (error.code === 'ACTION_REJECTED') {
+        throw new Error('User rejected the approval');
+      }
       throw error;
     }
   }
@@ -326,10 +416,17 @@ class WalletService {
   }
 
   /**
-   * Get provider for contract interactions
+   * Get provider (read-only or with signer)
    */
-  getProvider(): ethers.JsonRpcProvider {
+  getProvider(): ethers.JsonRpcProvider | ethers.BrowserProvider {
     return this.provider;
+  }
+
+  /**
+   * Get signer for direct contract interactions
+   */
+  getSigner(): ethers.Signer | null {
+    return this.signer;
   }
 
   /**
