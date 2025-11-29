@@ -14,7 +14,9 @@ export interface WalletInfo {
 }
 
 export const useMetaMaskSDK = () => {
-  const { account, chainId, ethereum, sdk } = useSDK();
+  const sdkState = useSDK();
+  const { account, chainId, provider, sdk, error: sdkError, connecting, connected } = sdkState;
+  
   const [walletInfo, setWalletInfo] = useState<WalletInfo>({
     address: '',
     chainId: 0,
@@ -25,16 +27,19 @@ export const useMetaMaskSDK = () => {
 
   // Update wallet info when account or chainId changes
   useEffect(() => {
-    if (account && chainId) {
-      setWalletInfo({
-        address: account,
-        chainId: Number(chainId),
-        isConnected: true,
-        isConnecting: false,
-      });
+    setWalletInfo({
+      address: account || '',
+      chainId: chainId ? parseInt(chainId, 16) : 0,
+      isConnected: connected || false,
+      isConnecting: connecting || false,
+    });
+    
+    if (sdkError) {
+      setError(new Error(sdkError.message || 'Unknown SDK error'));
+    } else {
       setError(null);
     }
-  }, [account, chainId]);
+  }, [account, chainId, connected, connecting, sdkError]);
 
   const connect = useCallback(async () => {
     try {
@@ -74,12 +79,12 @@ export const useMetaMaskSDK = () => {
   }, [sdk]);
 
   const signMessage = useCallback(async (message: string) => {
-    if (!ethereum) {
+    if (!provider) {
       throw new Error('Ethereum provider not available');
     }
 
     try {
-      const signature = await ethereum.request({
+      const signature = await provider.request({
         method: 'personal_sign',
         params: [message, account],
       }) as string;
@@ -89,15 +94,15 @@ export const useMetaMaskSDK = () => {
       setError(error);
       throw error;
     }
-  }, [ethereum, account]);
+  }, [provider, account]);
 
   const sendTransaction = useCallback(async (to: string, value: string, data?: string) => {
-    if (!ethereum) {
+    if (!provider) {
       throw new Error('Ethereum provider not available');
     }
 
     try {
-      const txHash = await ethereum.request({
+      const txHash = await provider.request({
         method: 'eth_sendTransaction',
         params: [
           {
@@ -114,7 +119,7 @@ export const useMetaMaskSDK = () => {
       setError(error);
       throw error;
     }
-  }, [ethereum, account]);
+  }, [provider, account]);
 
   return {
     ...walletInfo,
@@ -123,7 +128,7 @@ export const useMetaMaskSDK = () => {
     disconnect,
     signMessage,
     sendTransaction,
-    ethereum,
+    provider,
     sdk,
   };
 };
