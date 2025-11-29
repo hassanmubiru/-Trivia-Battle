@@ -76,14 +76,34 @@ export class MetaMaskService {
    * Connect to MetaMask wallet
    * Shows permission dialog if no injected provider
    */
-  async connect(): Promise<WalletInfo> {
+  async connect(useDemoMode: boolean = false): Promise<WalletInfo> {
     try {
       console.log('[MetaMask] Starting connection...');
 
-      if (!this.ethereum) {
+      // If no ethereum provider and not in demo mode, throw error
+      if (!this.ethereum && !useDemoMode) {
+        console.warn('[MetaMask] No provider found. Try using demo mode for testing.');
         throw new Error(
           'MetaMask provider not found. Please ensure MetaMask Mobile is installed and the app is opened from within MetaMask.'
         );
+      }
+
+      // Demo mode for testing without MetaMask
+      if (useDemoMode) {
+        console.log('[MetaMask] Using DEMO mode (for testing only)');
+        this.address = '0x1234567890123456789012345678901234567890'; // Test address
+        this.chainId = 11142220;
+        
+        const walletInfo: WalletInfo = {
+          address: this.address,
+          chainId: this.chainId,
+          isConnected: true,
+        };
+
+        // Save session
+        await this.saveSession(walletInfo);
+        this.emit('connected', walletInfo);
+        return walletInfo;
       }
 
       // Request accounts from injected ethereum provider
