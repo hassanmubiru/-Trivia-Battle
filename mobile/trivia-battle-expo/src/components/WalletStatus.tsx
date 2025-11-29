@@ -65,49 +65,29 @@ export const WalletStatus: React.FC<WalletStatusProps> = ({
             <Text style={styles.address}>{wallet.wallet.address}</Text>
           </View>
 
-          {showDetails && (
+          {showDetails && wallet.wallet.balance && (
             <>
-              {/* Network Info */}
-              <View style={styles.networkContainer}>
-                <Text style={styles.label}>Network</Text>
-                <Text style={styles.value}>{wallet.wallet.network.name}</Text>
-              </View>
-
               {/* Balances */}
               <View style={styles.balancesContainer}>
                 <Text style={styles.label}>Balances</Text>
                 <View style={styles.balanceRow}>
                   <Text style={styles.balanceLabel}>CELO:</Text>
                   <Text style={styles.balanceValue}>
-                    {parseFloat(wallet.wallet.balance.CELO).toFixed(4)}
+                    {typeof wallet.wallet.balance.CELO === 'string'
+                      ? parseFloat(wallet.wallet.balance.CELO).toFixed(4)
+                      : wallet.wallet.balance.CELO.toFixed(4)}
                   </Text>
                 </View>
-                <View style={styles.balanceRow}>
-                  <Text style={styles.balanceLabel}>cUSD:</Text>
-                  <Text style={styles.balanceValue}>
-                    {parseFloat(wallet.wallet.balance.cUSD).toFixed(2)}
-                  </Text>
-                </View>
-                <View style={styles.balanceRow}>
-                  <Text style={styles.balanceLabel}>USDC:</Text>
-                  <Text style={styles.balanceValue}>
-                    {parseFloat(wallet.wallet.balance.USDC).toFixed(2)}
-                  </Text>
-                </View>
-                <View style={styles.balanceRow}>
-                  <Text style={styles.balanceLabel}>USDT:</Text>
-                  <Text style={styles.balanceValue}>
-                    {parseFloat(wallet.wallet.balance.USDT).toFixed(2)}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Signing Status */}
-              <View style={styles.capabilityContainer}>
-                <Text style={styles.label}>Transaction Signing</Text>
-                <Text style={[styles.value, { color: wallet.wallet.canSign ? Colors.success : Colors.warning }]}>
-                  {wallet.wallet.canSign ? '✓ Enabled' : '✗ Read-only'}
-                </Text>
+                {wallet.wallet.balance.cUSD && (
+                  <View style={styles.balanceRow}>
+                    <Text style={styles.balanceLabel}>cUSD:</Text>
+                    <Text style={styles.balanceValue}>
+                      {typeof wallet.wallet.balance.cUSD === 'string'
+                        ? parseFloat(wallet.wallet.balance.cUSD).toFixed(2)
+                        : wallet.wallet.balance.cUSD.toFixed(2)}
+                    </Text>
+                  </View>
+                )}
               </View>
             </>
           )}
