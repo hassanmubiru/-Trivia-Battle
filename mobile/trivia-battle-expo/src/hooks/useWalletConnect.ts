@@ -13,6 +13,7 @@ export interface UseWalletConnectState {
   sendTransaction: (to: string, value: string) => Promise<string>;
   getBalance: () => Promise<string>;
   getTokenBalance: (tokenAddress: string, decimals?: number) => Promise<string>;
+  on?: (event: string, listener: Function) => void;
 }
 
 export function useWalletConnect(projectId: string): UseWalletConnectState {
@@ -156,5 +157,6 @@ export function useWalletConnect(projectId: string): UseWalletConnectState {
     sendTransaction,
     getBalance,
     getTokenBalance,
+    on: (event: string, listener: Function) => service.on(event, listener),
   };
 }
