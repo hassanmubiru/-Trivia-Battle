@@ -71,13 +71,27 @@ export default function AuthScreen({ navigation }: any) {
   const handleMetaMaskConnect = async () => {
     try {
       // This will show MetaMask permission dialog in the app
-      await metaMask.connect();
+      await metaMask.connect(false);
     } catch (error: any) {
       console.error('Connection error:', error);
       Alert.alert(
-        'Connection Error',
-        error.message || 'Failed to connect MetaMask.\n\nMake sure MetaMask Mobile is installed.'
+        'MetaMask Not Available',
+        'MetaMask Mobile is required.\n\nOptions:\n' +
+        '1. Install MetaMask Mobile from app store\n' +
+        '2. Open this app from within MetaMask\n' +
+        '3. Use Demo Mode to test (button below)',
+        [{ text: 'OK' }]
       );
+    }
+  };
+
+  const handleDemoModeConnect = async () => {
+    try {
+      // Connect in demo mode for testing
+      await metaMask.connect(true);
+    } catch (error: any) {
+      console.error('Demo mode error:', error);
+      Alert.alert('Demo Mode Error', error.message || 'Failed to enter demo mode');
     }
   };
 
@@ -143,6 +157,23 @@ export default function AuthScreen({ navigation }: any) {
               <Text style={styles.errorText}>⚠️ {metaMask.error.message}</Text>
             </View>
           )}
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Demo Mode */}
+          <Button
+            title="🧪 Demo Mode (Testing)"
+            onPress={handleDemoModeConnect}
+            disabled={metaMask.isConnecting}
+            loading={false}
+            variant="secondary"
+            size="lg"
+            fullWidth
+          />
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />

@@ -97,11 +97,11 @@ export function useMetaMask(): UseMetaMaskReturn {
     };
   }, []);
 
-  const connect = async () => {
+  const connect = async (useDemoMode: boolean = false) => {
     try {
       setIsConnecting(true);
       setError(null);
-      const walletInfo = await metamask.connect();
+      const walletInfo = await metamask.connect(useDemoMode);
       setAddress(walletInfo.address);
       setChainId(walletInfo.chainId);
       setIsConnected(true);
