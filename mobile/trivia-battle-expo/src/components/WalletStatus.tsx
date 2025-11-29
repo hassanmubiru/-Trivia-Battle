@@ -162,7 +162,6 @@ export const WalletStatus: React.FC<WalletStatusProps> = ({
                 variant="secondary"
                 size="md"
                 fullWidth
-                style={{ marginBottom: Spacing.sm }}
               />
               <Button
                 title="Disconnect"
