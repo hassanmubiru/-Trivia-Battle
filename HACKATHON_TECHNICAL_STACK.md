@@ -44,15 +44,14 @@
 - **Testing**: Hardhat Test Suite
 - **Deployment**: Hardhat Scripts
 - **Key Contracts**:
-  - `TriviaBattleV3.sol` - Main game contract (Production-Grade)
-  - `MockERC20.sol` - Production-Grade Test Token (Real ERC20, Not Mock)
+  - `TriviaBattleV3.sol` - Main game contract (Production-Grade, Deployed)
 
-#### Token Standards
-- **ERC-20**: Token support
-- **Supported Tokens**:
+#### Real Token Support (No Mocks)
+- **ERC-20**: Real token integration
+- **Supported Real Tokens**:
   - cUSD: 0xc2FB5a20d07036d828cBbF2FCEE5cea02cc9Cb2f (Celo Stablecoin)
-  - USDC: 0x360Da2CcFE307B5CB0330d062d8D83B721811B76
-  - USDT: 0xE5eA34847A04d197B22652be1Dc8FbFf11392239
+  - USDC: 0x360Da2CcFE307B5CB0330d062d8D83B721811B76 (Real USDC)
+  - USDT: 0xE5eA34847A04d197B22652be1Dc8FbFf11392239 (Real USDT)
 
 ### Backend Services
 
