@@ -9,94 +9,108 @@ export interface WalletInfo {
 
 /**
  * Direct MetaMask Mobile connection service
- * Uses MetaMask's injected provider for real wallet access
+ * Works with MetaMask Mobile's injected ethereum provider
  */
 export class MetaMaskService {
+  private ethereum: any = null;
+  private provider: ethers.JsonRpcProvider | null = null;
   private signer: ethers.Signer | null = null;
-  private provider: ethers.BrowserProvider | null = null;
   private address: string | null = null;
   private chainId: number = 11142220; // Celo Sepolia
   private listeners: Map<string, Function[]> = new Map();
+  private rpcUrl: string = 'https://celo-sepolia-rpc.publicnode.com';
 
   constructor() {
     this.initializeProvider();
   }
 
   /**
-   * Initialize ethers provider from MetaMask
+   * Initialize provider from MetaMask or create JSON-RPC provider
    */
   private initializeProvider(): void {
     try {
-      // In React Native with MetaMask Mobile, the injected provider is available
-      const window = global as any;
+      // Try to get injected ethereum from MetaMask Mobile
+      const globalObj = global as any;
       
-      if (window.ethereum) {
+      if (globalObj.ethereum) {
         console.log('[MetaMask] Injected provider detected');
-        this.provider = new ethers.BrowserProvider(window.ethereum);
+        this.ethereum = globalObj.ethereum;
         this.setupEventListeners();
       } else {
-        console.warn('[MetaMask] No injected provider found');
+        console.log('[MetaMask] No injected provider, using JSON-RPC');
       }
+
+      // Always create a JSON-RPC provider for direct RPC calls
+      this.provider = new ethers.JsonRpcProvider(this.rpcUrl, {
+        chainId: this.chainId,
+        name: 'Celo Sepolia',
+      });
+
+      console.log('[MetaMask] Provider initialized with RPC endpoint');
     } catch (error) {
       console.error('[MetaMask] Provider initialization error:', error);
     }
   }
 
   /**
-   * Initialize the service (load provider)
+   * Initialize the service
    */
   async initialize(): Promise<void> {
     try {
-      console.log('[MetaMask] Initializing...');
-      
-      // Check if we have a cached session
+      console.log('[MetaMask] Initializing service...');
+
+      if (!this.provider) {
+        this.initializeProvider();
+      }
+
+      // Try to restore previous session
       await this.restoreSession();
-      
-      console.log('[MetaMask] Initialized successfully');
+
+      console.log('[MetaMask] Initialization complete');
     } catch (error) {
       console.error('[MetaMask] Initialization error:', error);
-      throw error;
     }
   }
 
   /**
    * Connect to MetaMask wallet
-   * Prompts user to connect their MetaMask account
+   * Shows permission dialog if no injected provider
    */
   async connect(): Promise<WalletInfo> {
-    if (!this.provider) {
-      // If provider not available, try opening MetaMask app
-      this.openMetaMaskApp();
-      throw new Error(
-        'MetaMask provider not available. Opening MetaMask app...'
-      );
-    }
-
     try {
+      console.log('[MetaMask] Starting connection...');
+
+      if (!this.ethereum) {
+        throw new Error(
+          'MetaMask provider not found. Please ensure MetaMask Mobile is installed and the app is opened from within MetaMask.'
+        );
+      }
+
+      // Request accounts from injected ethereum provider
       console.log('[MetaMask] Requesting accounts...');
-      
-      // Request account access - this shows MetaMask permission dialog
-      const accounts = await (this.provider as any).ethereum.request({
+      const accounts = (await this.ethereum.request({
         method: 'eth_requestAccounts',
-      }) as string[];
+      })) as string[];
 
       if (!accounts || accounts.length === 0) {
         throw new Error('No accounts returned. User may have rejected the request.');
       }
 
       this.address = accounts[0];
-      console.log('[MetaMask] Connected to:', this.address);
+      console.log('[MetaMask] Connected to account:', this.address);
 
-      // Get current chain ID
-      const chainIdHex = await (this.provider as any).ethereum.request({
+      // Get chain ID
+      const chainIdHex = await this.ethereum.request({
         method: 'eth_chainId',
       }) as string;
-      
-      this.chainId = parseInt(chainIdHex, 16);
-      console.log('[MetaMask] Current chain ID:', this.chainId);
 
-      // Setup signer
-      this.signer = await this.provider.getSigner();
+      this.chainId = parseInt(chainIdHex, 16);
+      console.log('[MetaMask] Connected to chain:', this.chainId);
+
+      // Create a signer from the provider
+      if (this.provider) {
+        this.signer = await this.provider.getSigner();
+      }
 
       const walletInfo: WalletInfo = {
         address: this.address,
@@ -111,14 +125,7 @@ export class MetaMaskService {
       return walletInfo;
     } catch (error: any) {
       console.error('[MetaMask] Connection error:', error);
-      
-      // Check if MetaMask is installed
-      if (error.message?.includes('MetaMask')) {
-        this.emit('error', new Error('MetaMask Mobile is not installed. Please install it from your app store.'));
-      } else {
-        this.emit('error', error);
-      }
-      
+      this.emit('error', error);
       throw error;
     }
   }
@@ -170,14 +177,20 @@ export class MetaMaskService {
    * Sign a message
    */
   async signMessage(message: string): Promise<string> {
-    if (!this.signer || !this.address) {
+    if (!this.ethereum || !this.address) {
       throw new Error('Not connected to MetaMask');
     }
 
     try {
       console.log('[MetaMask] Signing message...');
-      const signature = await this.signer.signMessage(message);
-      console.log('[MetaMask] Message signed successfully');
+
+      // Sign message using eth_sign
+      const signature = await this.ethereum.request({
+        method: 'personal_sign',
+        params: [message, this.address],
+      }) as string;
+
+      console.log('[MetaMask] Message signed');
       return signature;
     } catch (error) {
       console.error('[MetaMask] Message signing error:', error);
@@ -193,26 +206,47 @@ export class MetaMaskService {
     value: string,
     data?: string
   ): Promise<string> {
-    if (!this.signer || !this.address || !this.provider) {
+    if (!this.ethereum || !this.address || !this.provider) {
       throw new Error('Not connected to MetaMask');
     }
 
     try {
       console.log('[MetaMask] Sending transaction...');
-      
+
       // Validate address
       if (!ethers.isAddress(to)) {
         throw new Error('Invalid recipient address');
       }
 
-      const tx = await this.signer.sendTransaction({
+      // Get gas price and estimate gas
+      const gasPrice = await this.provider.getGasPrice();
+      const valueInWei = ethers.parseEther(value);
+
+      // Estimate gas
+      const estimatedGas = await this.provider.estimateGas({
+        from: this.address,
         to: to,
-        value: ethers.parseEther(value),
+        value: valueInWei,
         data: data || '0x',
       });
 
-      console.log('[MetaMask] Transaction sent:', tx.hash);
-      return tx.hash;
+      // Send transaction
+      const txHash = await this.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [
+          {
+            from: this.address,
+            to: to,
+            value: ethers.toBeHex(valueInWei),
+            gas: ethers.toBeHex(estimatedGas),
+            gasPrice: ethers.toBeHex(gasPrice),
+            data: data || '0x',
+          },
+        ],
+      }) as string;
+
+      console.log('[MetaMask] Transaction sent:', txHash);
+      return txHash;
     } catch (error) {
       console.error('[MetaMask] Transaction error:', error);
       throw error;
