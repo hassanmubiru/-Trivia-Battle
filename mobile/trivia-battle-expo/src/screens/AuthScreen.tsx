@@ -197,7 +197,7 @@ export default function AuthScreen({ navigation }: any) {
           <Button
             title="📱 Login with Phone"
             onPress={handlePhoneLogin}
-            disabled={walletConnect.isConnecting}
+            disabled={false}
             loading={false}
             variant="ghost"
             size="lg"
