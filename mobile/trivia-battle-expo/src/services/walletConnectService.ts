@@ -1,10 +1,32 @@
 import { EthereumProvider } from '@walletconnect/ethereum-provider';
 import { ethers } from 'ethers';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Linking, Alert } from 'react-native';
 
 // Platform detection
 const isReactNative = () => {
   return typeof navigator !== 'undefined' && !!navigator.product;
+};
+
+// MetaMask deep link helper
+const openMetaMaskDeepLink = (uri: string) => {
+  // WalletConnect v2 format: wc:projectId@version?bridge=...&key=...
+  // Convert to MetaMask deep link: metamask://wc?uri=encoded_uri
+  try {
+    const encodedUri = encodeURIComponent(uri);
+    const deepLink = `metamask://wc?uri=${encodedUri}`;
+    
+    console.log('[WalletConnect] Opening MetaMask with deep link...');
+    Linking.openURL(deepLink).catch((error) => {
+      console.error('[WalletConnect] Failed to open MetaMask:', error);
+      throw new Error(
+        'MetaMask is not installed. Please install MetaMask Mobile from your app store.'
+      );
+    });
+  } catch (error) {
+    console.error('[WalletConnect] Deep link error:', error);
+    throw error;
+  }
 };
 
 export interface WalletInfo {
@@ -87,7 +109,7 @@ export class WalletConnectService {
   }
 
   /**
-   * Connect to wallet via QR code (React Native compatible)
+   * Connect to wallet via deep link to MetaMask app
    */
   async connect(): Promise<WalletInfo> {
     if (!this.provider) {
@@ -95,16 +117,17 @@ export class WalletConnectService {
     }
 
     try {
-      console.log('[WalletConnect] Connecting...');
+      console.log('[WalletConnect] Initiating connection...');
       
-      // Get the connection URI for QR code
+      // Get the connection URI
       const uri = await this.provider.connect();
-      
-      // Emit URI for QR code display (app must handle this)
-      this.emit('uri', uri);
-      console.log('[WalletConnect] QR URI generated:', uri);
+      console.log('[WalletConnect] Connection URI generated');
 
-      // Wait for wallet response
+      // Open MetaMask app directly with deep link
+      // This will switch to MetaMask and show approval dialog
+      openMetaMaskDeepLink(uri);
+
+      // Wait for wallet response (this happens when user approves in MetaMask)
       const accounts = (await this.provider.request({
         method: 'eth_requestAccounts',
       })) as string[];

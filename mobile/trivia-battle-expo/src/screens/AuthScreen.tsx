@@ -17,7 +17,6 @@ import { Colors, Typography, Spacing, BorderRadius } from '../constants/theme';
 
 export default function AuthScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [qrUri, setQrUri] = useState<string | null>(null);
   const projectId = process.env.EXPO_PUBLIC_WALLET_CONNECT_PROJECT_ID || '';
   const walletConnect = useWalletConnect(projectId);
 
@@ -96,14 +95,7 @@ export default function AuthScreen({ navigation }: any) {
     }
 
     try {
-      // Listen for URI event
-      const handleUri = (uri: string) => {
-        console.log('Received URI:', uri);
-        setQrUri(uri);
-      };
-
-      walletConnect.on?.('uri', handleUri);
-      
+      // This will open MetaMask app directly
       await walletConnect.connect();
     } catch (error: any) {
       console.error('Connection error:', error);
@@ -111,7 +103,6 @@ export default function AuthScreen({ navigation }: any) {
         'Connection Error',
         error.message || 'Failed to connect MetaMask.\n\nMake sure MetaMask Mobile is installed.'
       );
-      setQrUri(null);
     }
   };
 
@@ -175,16 +166,6 @@ export default function AuthScreen({ navigation }: any) {
           {walletConnect.error && (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>⚠️ {walletConnect.error.message}</Text>
-            </View>
-          )}
-
-          {qrUri && (
-            <View style={styles.qrBox}>
-              <Text style={styles.qrTitle}>Scan with MetaMask Mobile:</Text>
-              <Text style={styles.qrUri}>{qrUri}</Text>
-              <Text style={styles.qrHint}>
-                Open MetaMask Mobile → Scanner → Scan this QR code
-              </Text>
             </View>
           )}
 
@@ -378,34 +359,6 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: Typography.fontSize.sm,
     color: '#c62828',
-  },
-  qrBox: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    marginTop: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.outline,
-  },
-  qrTitle: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.semibold as any,
-    color: Colors.onSurface,
-    marginBottom: Spacing.sm,
-  },
-  qrUri: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.onSurfaceVariant,
-    fontFamily: 'monospace',
-    marginBottom: Spacing.sm,
-    padding: Spacing.sm,
-    backgroundColor: Colors.background,
-    borderRadius: BorderRadius.sm,
-  },
-  qrHint: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.onSurfaceVariant,
-    fontStyle: 'italic',
   },
   infoCard: {
     marginBottom: Spacing.lg,
