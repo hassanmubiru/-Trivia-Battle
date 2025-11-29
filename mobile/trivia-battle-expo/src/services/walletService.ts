@@ -150,7 +150,7 @@ class WalletService {
         balances,
       };
     } catch (error) {
-      console.error('Provider connection error:', error);
+      // Don't log as error since this is expected when no wallet is available
       throw error;
     }
   }
@@ -252,7 +252,7 @@ class WalletService {
       }
       return null;
     } catch (error) {
-      console.error('Restore connection error:', error);
+      // Expected if no previous connection exists
       return null;
     }
   }
@@ -287,7 +287,7 @@ class WalletService {
         USDT: ethers.formatUnits(usdtBalance, 6),
       };
     } catch (error) {
-      console.error('Error fetching balances:', error);
+      console.warn('Error fetching balances:', error);
       return { CELO: '0', cUSD: '0', USDC: '0', USDT: '0' };
     }
   }
@@ -334,7 +334,7 @@ class WalletService {
       console.log('Transaction confirmed:', receipt.hash);
       return receipt.hash;
     } catch (error: any) {
-      console.error('Transaction error:', error);
+      console.warn('Transaction error:', error);
       if (error.code === 'ACTION_REJECTED') {
         throw new Error('User rejected the transaction');
       }
@@ -367,7 +367,7 @@ class WalletService {
       console.log('Approval confirmed:', receipt.hash);
       return receipt.hash;
     } catch (error: any) {
-      console.error('Approval error:', error);
+      console.warn('Approval error:', error);
       if (error.code === 'ACTION_REJECTED') {
         throw new Error('User rejected the approval');
       }
