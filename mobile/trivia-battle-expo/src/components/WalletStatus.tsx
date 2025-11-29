@@ -7,19 +7,18 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../constants/theme';
 import { Button } from './Button';
-import { UseWalletState } from '../hooks/useWallet';
+import { UseWalletState, useWallet } from '../hooks/useWallet';
 
 interface WalletStatusProps {
-  wallet: UseWalletState;
   showDetails?: boolean;
   compact?: boolean;
 }
 
 export const WalletStatus: React.FC<WalletStatusProps> = ({
-  wallet,
   showDetails = false,
   compact = false,
 }) => {
+  const wallet = useWallet();
   const getStatusColor = (): string => {
     if (wallet.isConnecting) return Colors.warning;
     if (wallet.isConnected) return Colors.success;
