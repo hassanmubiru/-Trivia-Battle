@@ -399,12 +399,11 @@ export class MetaMaskService {
       if (session) {
         const data = JSON.parse(session);
         const isExpired = Date.now() - data.timestamp > 24 * 60 * 60 * 1000; // 24h
-        
-        if (!isExpired && this.provider) {
+
+        if (!isExpired) {
           console.log('[MetaMask] Restoring previous session...');
           this.address = data.address;
           this.chainId = data.chainId;
-          this.signer = await this.provider.getSigner();
         }
       }
     } catch (error) {
