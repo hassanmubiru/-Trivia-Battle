@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { miniPayService } from '../services/miniPayService';
 
 interface Question {
   question: string;
@@ -108,9 +110,19 @@ export default function GameSessionScreen({ route, navigation }: any) {
     }
   };
 
-  const endGame = () => {
+  const endGame = async () => {
     const won = score > opponentScore;
     const winnings = won ? parseFloat(stake) * 1.8 : 0;
+    
+    // Attempt to deposit stake if available
+    try {
+      if (miniPayService.isConnected()) {
+        await miniPayService.deposit(stake, 'CELO');
+      }
+    } catch (error) {
+      console.error('Failed to deposit stake:', error);
+      // Continue anyway - this is a demo
+    }
     
     Alert.alert(
       won ? '🎉 You Won!' : '😔 You Lost',

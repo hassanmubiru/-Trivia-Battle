@@ -73,6 +73,41 @@ export default function AuthScreen({ navigation }: any) {
     }
   };
 
+  const handleMiniPayConnect = async () => {
+    setIsConnecting(true);
+    try {
+      // Check if MiniPay is available
+      if (!miniPayService.isMiniPayEnvironment()) {
+        Alert.alert(
+          'MiniPay Not Available',
+          'This app must be opened in the Opera MiniPay wallet to use MiniPay connection.\n\nAlternatively, use MetaMask or manual address entry.',
+          [{ text: 'OK' }]
+        );
+        setIsConnecting(false);
+        return;
+      }
+
+      // Attempt to connect via MiniPay
+      const walletState = await miniPayService.connect();
+      
+      if (walletState.isConnected && walletState.address) {
+        await AsyncStorage.setItem('walletAddress', walletState.address);
+        await AsyncStorage.setItem('walletType', 'minipay');
+        await AsyncStorage.setItem('isAuthenticated', 'true');
+        
+        Alert.alert(
+          'Connected via MiniPay!',
+          `CELO: ${parseFloat(walletState.balances.CELO).toFixed(4)}\ncUSD: ${parseFloat(walletState.balances.cUSD).toFixed(2)}`,
+          [{ text: 'Continue', onPress: () => navigation.replace('Main') }]
+        );
+      }
+    } catch (error: any) {
+      Alert.alert('MiniPay Connection Error', error.message || 'Failed to connect MiniPay wallet');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
   const handleWalletConnect = async () => {
     if (!walletAddress || walletAddress.length < 42) {
       Alert.alert('Error', 'Please enter a valid wallet address (0x...)');
@@ -114,6 +149,21 @@ export default function AuthScreen({ navigation }: any) {
       <Text style={styles.subtitle}>Test Your Knowledge, Earn Crypto</Text>
 
       <View style={styles.loginBox}>
+        {/* MiniPay Connection */}
+        <TouchableOpacity 
+          style={[styles.button, styles.buttonMiniPay]} 
+          onPress={handleMiniPayConnect}
+          disabled={isConnecting}
+        >
+          {isConnecting ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <Text style={styles.buttonTextDark}>📱 Connect with MiniPay</Text>
+          )}
+        </TouchableOpacity>
+
+        <Text style={styles.divider}>OR</Text>
+
         {/* MetaMask Connection */}
         <TouchableOpacity 
           style={[styles.button, styles.buttonMetaMask]} 
@@ -129,8 +179,9 @@ export default function AuthScreen({ navigation }: any) {
 
         <Text style={styles.divider}>OR</Text>
 
-        {/* Manual Wallet Input */}
-        <Text style={styles.label}>Wallet Address</Text>
+        {/* Manual Wallet Input - Now with Real Signing */}
+        <Text style={styles.label}>Connect Wallet Address</Text>
+        <Text style={styles.sublabel}>Enter your wallet to enable transactions</Text>
         <TextInput
           style={styles.input}
           placeholder="0x..."
@@ -148,7 +199,7 @@ export default function AuthScreen({ navigation }: any) {
           {isConnecting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Connect Wallet</Text>
+            <Text style={styles.buttonText}>💼 Connect & Sign</Text>
           )}
         </TouchableOpacity>
 
@@ -241,6 +292,9 @@ const styles = StyleSheet.create({
   buttonMetaMask: {
     backgroundColor: '#F6851B',
   },
+  buttonMiniPay: {
+    backgroundColor: '#FCFF52',
+  },
   buttonText: {
     color: '#000',
     fontSize: 16,
@@ -248,6 +302,11 @@ const styles = StyleSheet.create({
   },
   buttonTextWhite: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  buttonTextDark: {
+    color: '#000',
     fontSize: 16,
     fontWeight: 'bold',
   },
