@@ -212,7 +212,7 @@ export default function AuthScreen({ navigation }: any) {
           {isConnecting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>💼 Connect & Sign</Text>
+            <Text style={styles.buttonText}>💼 Enter Address (Read-Only)</Text>
           )}
         </TouchableOpacity>
 

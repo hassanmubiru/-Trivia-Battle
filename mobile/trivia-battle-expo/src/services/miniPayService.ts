@@ -145,16 +145,21 @@ class MiniPayService {
   }
 
   /**
-   * Connect with wallet address (read-only mode)
+   * Connect with wallet address (read-only fallback)
    */
   async connectWithAddress(address: string): Promise<WalletState> {
     try {
+      if (!ethers.isAddress(address)) {
+        throw new Error('Invalid wallet address');
+      }
+
       this.provider = new ethers.JsonRpcProvider(
         NETWORK.rpcUrl,
         { chainId: NETWORK.chainId, name: NETWORK.name }
       );
       this.walletAddress = address;
       this.isMiniPay = false;
+      this.signer = null; // No signer in read-only mode
       
       await AsyncStorage.setItem('walletAddress', address);
       
@@ -209,9 +214,12 @@ class MiniPayService {
 
   /**
    * Deposit funds into game contract
+   * Requires real signer (MiniPay or MetaMask)
    */
   async deposit(amount: string, token: string = 'CELO'): Promise<string> {
-    if (!this.signer) throw new Error('Wallet not connected for signing');
+    if (!this.signer) {
+      throw new Error('Cannot sign transactions. Please connect with MiniPay or MetaMask for transaction support.');
+    }
     
     try {
       const contract = new ethers.Contract(TRIVIA_CONTRACT, TRIVIA_ABI, this.signer);
@@ -220,8 +228,9 @@ class MiniPayService {
         const tx = await contract.deposit({
           value: ethers.parseEther(amount),
         });
-        await tx.wait();
-        return tx.hash;
+        const receipt = await tx.wait();
+        if (!receipt) throw new Error('Deposit failed');
+        return receipt.hash;
       } else {
         const tokenAddress = this.getTokenAddress(token);
         const decimals = token === 'cUSD' ? 18 : 6;
@@ -229,31 +238,40 @@ class MiniPayService {
         
         const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, this.signer);
         const approveTx = await tokenContract.approve(TRIVIA_CONTRACT, tokenAmount);
-        await approveTx.wait();
+        const approveReceipt = await approveTx.wait();
+        if (!approveReceipt) throw new Error('Approval failed');
         
         const tx = await contract.depositToken(tokenAddress, tokenAmount);
-        await tx.wait();
-        return tx.hash;
+        const receipt = await tx.wait();
+        if (!receipt) throw new Error('Deposit failed');
+        return receipt.hash;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Deposit error:', error);
+      if (error.code === 'ACTION_REJECTED') {
+        throw new Error('User rejected the transaction');
+      }
       throw error;
     }
   }
 
   /**
    * Withdraw funds from game contract
+   * Requires real signer (MiniPay or MetaMask)
    */
   async withdraw(amount: string, token: string = 'CELO'): Promise<string> {
-    if (!this.signer) throw new Error('Wallet not connected for signing');
+    if (!this.signer) {
+      throw new Error('Cannot sign transactions. Please connect with MiniPay or MetaMask for transaction support.');
+    }
     
     try {
       const contract = new ethers.Contract(TRIVIA_CONTRACT, TRIVIA_ABI, this.signer);
       
       if (token === 'CELO') {
         const tx = await contract.withdraw(ethers.parseEther(amount));
-        await tx.wait();
-        return tx.hash;
+        const receipt = await tx.wait();
+        if (!receipt) throw new Error('Withdrawal failed');
+        return receipt.hash;
       } else {
         const tokenAddress = this.getTokenAddress(token);
         const decimals = token === 'cUSD' ? 18 : 6;
@@ -261,11 +279,15 @@ class MiniPayService {
           tokenAddress, 
           ethers.parseUnits(amount, decimals)
         );
-        await tx.wait();
-        return tx.hash;
+        const receipt = await tx.wait();
+        if (!receipt) throw new Error('Withdrawal failed');
+        return receipt.hash;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Withdraw error:', error);
+      if (error.code === 'ACTION_REJECTED') {
+        throw new Error('User rejected the transaction');
+      }
       throw error;
     }
   }
@@ -284,6 +306,30 @@ class MiniPayService {
         return NETWORK.USDT;
       default:
         throw new Error(`Unknown token: ${token}`);
+    }
+  }
+
+  /**
+   * Approve token spending for contract
+   * Requires real signer
+   */
+  async approveToken(tokenAddress: string, spenderAddress: string, amount: string): Promise<string> {
+    if (!this.signer) {
+      throw new Error('Cannot sign transactions. Please connect with MiniPay or MetaMask for transaction support.');
+    }
+
+    try {
+      const contract = new ethers.Contract(tokenAddress, ERC20_ABI, this.signer);
+      const tx = await contract.approve(spenderAddress, ethers.parseUnits(amount, 18));
+      const receipt = await tx.wait();
+      if (!receipt) throw new Error('Approval failed');
+      return receipt.hash;
+    } catch (error: any) {
+      console.error('Approval error:', error);
+      if (error.code === 'ACTION_REJECTED') {
+        throw new Error('User rejected the approval');
+      }
+      throw error;
     }
   }
 
