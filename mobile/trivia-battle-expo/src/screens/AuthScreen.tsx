@@ -17,10 +17,11 @@ import { Colors, Typography, Spacing, BorderRadius } from '../constants/theme';
 
 export default function AuthScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [isConnecting, setIsConnecting] = useState(false);
+  const projectId = process.env.EXPO_PUBLIC_WALLET_CONNECT_PROJECT_ID || '';
+  const walletConnect = useWalletConnect(projectId);
 
   useEffect(() => {
-    // Check if already connected
+    // Check if already authenticated
     const checkAuth = async () => {
       const isAuthenticated = await AsyncStorage.getItem('isAuthenticated');
       if (isAuthenticated === 'true') {
@@ -30,70 +31,78 @@ export default function AuthScreen({ navigation }: any) {
     checkAuth();
   }, [navigation]);
 
+  // Auto-navigate when wallet connects
+  useEffect(() => {
+    const handleWalletConnect = async () => {
+      if (walletConnect.isConnected && walletConnect.address) {
+        try {
+          await AsyncStorage.setItem('walletAddress', walletConnect.address);
+          await AsyncStorage.setItem('walletType', 'walletconnect');
+          await AsyncStorage.setItem('isAuthenticated', 'true');
+          
+          Alert.alert(
+            '✓ Connected!',
+            `Wallet: ${walletConnect.address.slice(0, 6)}...${walletConnect.address.slice(-4)}`,
+            [{ text: 'Continue', onPress: () => navigation.replace('Main') }]
+          );
+        } catch (error) {
+          console.error('Error saving wallet:', error);
+        }
+      }
+    };
+    
+    handleWalletConnect();
+  }, [walletConnect.isConnected, walletConnect.address]);
+
   const handlePhoneLogin = async () => {
     if (phoneNumber.length < 10) {
       Alert.alert('Error', 'Please enter a valid phone number');
       return;
     }
     
-    setIsConnecting(true);
     try {
       await AsyncStorage.setItem('userPhone', phoneNumber);
       await AsyncStorage.setItem('isAuthenticated', 'true');
       navigation.replace('Main');
     } catch (error: any) {
       Alert.alert('Error', 'Failed to login');
-    } finally {
-      setIsConnecting(false);
     }
   };
 
   const handleWalletConnectMetaMask = async () => {
-    setIsConnecting(true);
-    try {
-      const projectId = process.env.EXPO_PUBLIC_WALLET_CONNECT_PROJECT_ID;
-      
-      if (!projectId) {
-        Alert.alert(
-          'Configuration Required',
-          'WalletConnect Project ID not configured.\n\n' +
-          'Steps:\n' +
-          '1. Go to: cloud.walletconnect.com\n' +
-          '2. Create a free account and get a Project ID\n' +
-          '3. Add to .env file:\n' +
-          '   EXPO_PUBLIC_WALLET_CONNECT_PROJECT_ID=your-id\n\n' +
-          'Reference: WALLETCONNECT_V2_IMPLEMENTATION.md',
-          [
-            {
-              text: 'Open WalletConnect Cloud',
-              onPress: () => Linking.openURL('https://cloud.walletconnect.com'),
-            },
-            { text: 'OK', style: 'cancel' },
-          ]
-        );
-        setIsConnecting(false);
-        return;
-      }
-
+    if (!projectId) {
       Alert.alert(
-        'WalletConnect Setup',
-        'Full WalletConnect v2 implementation coming soon.\n\n' +
-        'To complete integration:\n' +
-        '1. Implement WalletConnectService from WALLETCONNECT_V2_IMPLEMENTATION.md\n' +
-        '2. Create files in src/services/ and src/hooks/\n' +
-        '3. Test with MetaMask Mobile app\n\n' +
-        'Your Project ID is configured and ready!',
-        [{ text: 'Got It' }]
+        'Configuration Required',
+        'WalletConnect Project ID not configured.\n\n' +
+        'Steps:\n' +
+        '1. Go to: cloud.walletconnect.com\n' +
+        '2. Create a free account\n' +
+        '3. Get a Project ID\n' +
+        '4. Add to .env:\n' +
+        '   EXPO_PUBLIC_WALLET_CONNECT_PROJECT_ID=your-id\n' +
+        '5. Restart the app',
+        [
+          {
+            text: 'Open WalletConnect Cloud',
+            onPress: () => Linking.openURL('https://cloud.walletconnect.com'),
+          },
+          { text: 'OK', style: 'cancel' },
+        ]
       );
-      setIsConnecting(false);
+      return;
+    }
+
+    try {
+      await walletConnect.connect();
     } catch (error: any) {
-      Alert.alert('Connection Error', error.message || 'Failed to connect');
-      setIsConnecting(false);
+      Alert.alert(
+        'Connection Error',
+        error.message || 'Failed to connect MetaMask.\n\nMake sure MetaMask Mobile is installed.'
+      );
     }
   };
 
   const handleMiniPayConnect = async () => {
-    setIsConnecting(true);
     try {
       if (!miniPayService.isMiniPayEnvironment()) {
         Alert.alert(
@@ -102,7 +111,6 @@ export default function AuthScreen({ navigation }: any) {
           'Alternative: Use MetaMask via WalletConnect',
           [{ text: 'OK' }]
         );
-        setIsConnecting(false);
         return;
       }
 
@@ -121,8 +129,6 @@ export default function AuthScreen({ navigation }: any) {
       }
     } catch (error: any) {
       Alert.alert('MiniPay Error', error.message || 'Failed to connect');
-    } finally {
-      setIsConnecting(false);
     }
   };
 
@@ -144,14 +150,20 @@ export default function AuthScreen({ navigation }: any) {
           
           {/* Primary: WalletConnect MetaMask */}
           <Button
-            title="🦊 Connect MetaMask via WalletConnect"
+            title={walletConnect.isConnecting ? '⏳ Connecting...' : '🦊 Connect MetaMask via WalletConnect'}
             onPress={handleWalletConnectMetaMask}
-            disabled={isConnecting}
-            loading={isConnecting}
+            disabled={walletConnect.isConnecting}
+            loading={walletConnect.isConnecting}
             variant="primary"
             size="lg"
             fullWidth
           />
+
+          {walletConnect.error && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>⚠️ {walletConnect.error.message}</Text>
+            </View>
+          )}
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
@@ -163,8 +175,8 @@ export default function AuthScreen({ navigation }: any) {
           <Button
             title="📱 Connect with MiniPay (Celo)"
             onPress={handleMiniPayConnect}
-            disabled={isConnecting}
-            loading={isConnecting}
+            disabled={walletConnect.isConnecting}
+            loading={false}
             variant="secondary"
             size="lg"
             fullWidth
@@ -206,8 +218,8 @@ export default function AuthScreen({ navigation }: any) {
           <Button
             title="📱 Login with Phone"
             onPress={handlePhoneLogin}
-            disabled={isConnecting}
-            loading={isConnecting}
+            disabled={walletConnect.isConnecting}
+            loading={false}
             variant="ghost"
             size="lg"
             fullWidth
@@ -331,6 +343,18 @@ const styles = StyleSheet.create({
   bold: {
     fontWeight: Typography.fontWeight.semibold as any,
     color: Colors.onSurface,
+  },
+  errorBox: {
+    backgroundColor: '#ffebee',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginTop: Spacing.lg,
+    borderLeftWidth: 4,
+    borderLeftColor: '#c62828',
+  },
+  errorText: {
+    fontSize: Typography.fontSize.sm,
+    color: '#c62828',
   },
   infoCard: {
     marginBottom: Spacing.lg,
