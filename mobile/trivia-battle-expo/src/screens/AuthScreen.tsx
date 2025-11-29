@@ -11,13 +11,13 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { miniPayService } from '../services/miniPayService';
-import { useMetaMask } from '../hooks/useMetaMask';
+import { useMetaMaskSDK } from '../hooks/useMetaMaskSDK';
 import { Button, Card, Input } from '../components';
 import { Colors, Typography, Spacing, BorderRadius } from '../constants/theme';
 
 export default function AuthScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber] = useState('');
-  const metaMask = useMetaMask();
+  const metaMask = useMetaMaskSDK();
 
   useEffect(() => {
     // Check if already authenticated
@@ -70,28 +70,14 @@ export default function AuthScreen({ navigation }: any) {
 
   const handleMetaMaskConnect = async () => {
     try {
-      // This will show MetaMask permission dialog in the app
-      await metaMask.connect(false);
+      await metaMask.connect();
     } catch (error: any) {
       console.error('Connection error:', error);
       Alert.alert(
-        'MetaMask Not Available',
-        'MetaMask Mobile is required.\n\nOptions:\n' +
-        '1. Install MetaMask Mobile from app store\n' +
-        '2. Open this app from within MetaMask\n' +
-        '3. Use Demo Mode to test (button below)',
+        'Connection Failed',
+        error.message || 'Failed to connect to MetaMask',
         [{ text: 'OK' }]
       );
-    }
-  };
-
-  const handleDemoModeConnect = async () => {
-    try {
-      // Connect in demo mode for testing
-      await metaMask.connect(true);
-    } catch (error: any) {
-      console.error('Demo mode error:', error);
-      Alert.alert('Demo Mode Error', error.message || 'Failed to enter demo mode');
     }
   };
 
