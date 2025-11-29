@@ -72,30 +72,53 @@ Simple demo access without a wallet.
 await AsyncStorage.setItem('userPhone', phoneNumber);
 ```
 
-## Production Solution: WalletConnect v2
+## Production Solution: WalletConnect v2 (Standard for React Native)
 
-For production apps that need full mobile signing support with MetaMask, you need **WalletConnect v2**.
+**WalletConnect v2 is the industry standard for mobile wallet integration in React Native/Expo.**
 
-### What is WalletConnect?
+### Why WalletConnect for React Native?
 
-WalletConnect is a protocol that:
-- Bridges your app with wallet apps
-- Works on all platforms (iOS, Android, Web)
-- Supports MetaMask Mobile, Trust Wallet, Rainbow, etc.
-- Handles signing requests securely
+Since MetaMask's injected provider (`window.ethereum`) only works in browsers, WalletConnect is the recommended approach for mobile apps.
 
-### How WalletConnect Works
+**WalletConnect advantages:**
+- ✅ **Standard in React Native ecosystem** - Used by all major apps
+- ✅ Bridges your app with any wallet app
+- ✅ Works on iOS, Android, and Web
+- ✅ Supports MetaMask Mobile, Trust Wallet, Rainbow, Coinbase Wallet, etc.
+- ✅ Handles signing requests securely
+- ✅ User-friendly QR code flow
+- ✅ Production-proven and battle-tested
+
+### How WalletConnect v2 Works
 
 ```
 Your App                 Wallet App (MetaMask)
+(Trivia Game)            (Mobile)
     |                            |
-    |--- QR Code + Session ------|
+    |--- Generate QR Code ------|
+    |    (Session + URI)         |
     |                            |
-    |--- Sign Request ----------->|
-    |                            | User approves
-    |<---- Signature -------------|
+    |<-- User scans QR ---------|
     |                            |
+    |--- Request Signature ----->|
+    |    (eth_signMessage)       |
+    |                            | User approves in wallet
+    |<-- Signature returned -----|
+    |                            |
+    |--- Send Transaction ------>|
+    |    (eth_sendTransaction)   |
+    |                            | User approves in wallet
+    |<-- Tx Hash returned -------|
 ```
+
+### WalletConnect v2 vs Other Solutions
+
+| Solution | Mobile | Signing | Easy Setup | Standard |
+|----------|--------|---------|-----------|----------|
+| **WalletConnect v2** | ✅ Yes | ✅ Yes | ⚠️ Moderate | ✅ **Industry Standard** |
+| MiniPay | ✅ Yes | ✅ Yes | ✅ Simple | ⚠️ Regional (Celo) |
+| Manual Entry | ✅ Yes | ❌ No | ✅ Simple | ✅ Fallback |
+| Browser MetaMask | ❌ No | ❌ No | ✅ Simple | ❌ Web only |
 
 ### Implementation Steps
 
