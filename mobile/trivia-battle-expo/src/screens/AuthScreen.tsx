@@ -155,92 +155,140 @@ export default function AuthScreen({ navigation }: any) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <StatusBar style="light" />
+    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      <StatusBar style="dark" />
+      <RNStatusBar barStyle="dark-content" backgroundColor={Colors.background} />
       
-      <Text style={styles.title}>Trivia Battle</Text>
-      <Text style={styles.subtitle}>Test Your Knowledge, Earn Crypto</Text>
-
-      <View style={styles.loginBox}>
-        {/* MiniPay Connection */}
-        <TouchableOpacity 
-          style={[styles.button, styles.buttonMiniPay]} 
-          onPress={handleMiniPayConnect}
-          disabled={isConnecting}
-        >
-          {isConnecting ? (
-            <ActivityIndicator color="#000" />
-          ) : (
-            <Text style={styles.buttonTextDark}>📱 Connect with MiniPay</Text>
-          )}
-        </TouchableOpacity>
-
-        <Text style={styles.divider}>OR</Text>
-
-        {/* MetaMask Connection */}
-        <TouchableOpacity 
-          style={[styles.button, styles.buttonMetaMask]} 
-          onPress={handleMetaMaskConnect}
-          disabled={isConnecting}
-        >
-          {isConnecting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonTextWhite}>🦊 Connect MetaMask / Wallet</Text>
-          )}
-        </TouchableOpacity>
-
-        <Text style={styles.divider}>OR</Text>
-
-        {/* Manual Wallet Address - Read-Only Fallback */}
-        <Text style={styles.label}>Manual Address (Read-Only)</Text>
-        <Text style={styles.sublabel}>Enter wallet address without signing capability</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="0x..."
-          placeholderTextColor="#666"
-          value={walletAddress}
-          onChangeText={setWalletAddress}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <TouchableOpacity 
-          style={[styles.button, styles.buttonSecondary]} 
-          onPress={handleWalletConnect}
-          disabled={isConnecting}
-        >
-          {isConnecting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>💼 Enter Address (Read-Only)</Text>
-          )}
-        </TouchableOpacity>
-
-        <Text style={styles.divider}>OR</Text>
-
-        {/* Phone Login */}
-        <Text style={styles.label}>Phone Number (Demo Mode)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="+256 XXX XXX XXX"
-          placeholderTextColor="#666"
-          keyboardType="phone-pad"
-          value={phoneNumber}
-          onChangeText={setPhoneNumber}
-        />
-        <TouchableOpacity style={[styles.button, styles.buttonGreen]} onPress={handlePhoneLogin}>
-          <Text style={styles.buttonText}>Login with Phone</Text>
-        </TouchableOpacity>
+      {/* Header Section */}
+      <View style={styles.headerSection}>
+        <Text style={styles.title}>Trivia Battle</Text>
+        <Text style={styles.subtitle}>Test Your Knowledge, Earn Crypto</Text>
       </View>
 
-      <View style={styles.networkInfo}>
-        <Text style={styles.networkText}>🔗 Network: Celo Alfajores Testnet</Text>
-        <Text style={styles.networkText}>Get test CELO from faucet.celo.org</Text>
-      </View>
+      {/* Main Content Card */}
+      <Card style={styles.card} variant="elevated">
+        {/* Connection Methods */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Connect Your Wallet</Text>
+          
+          {/* MiniPay Button */}
+          <Button
+            title="📱 Connect with MiniPay"
+            onPress={handleMiniPayConnect}
+            disabled={isConnecting}
+            loading={isConnecting}
+            variant="primary"
+            size="lg"
+            fullWidth
+          />
 
-      <Text style={styles.info}>
-        Play trivia games, compete with others, and earn rewards on Celo blockchain
-      </Text>
+          {/* Divider */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* MetaMask Button */}
+          <Button
+            title="🦊 Connect MetaMask / Wallet"
+            onPress={handleMetaMaskConnect}
+            disabled={isConnecting}
+            loading={isConnecting}
+            variant="secondary"
+            size="lg"
+            fullWidth
+          />
+        </View>
+
+        {/* Divider */}
+        <View style={[styles.divider, { marginVertical: Spacing.xl }]}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>OR</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* Manual Entry Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Manual Entry</Text>
+          <Text style={styles.sectionDescription}>
+            Enter your wallet address for read-only access (no signing)
+          </Text>
+          
+          <Input
+            label="Wallet Address"
+            placeholder="0x..."
+            value={walletAddress}
+            onChangeText={setWalletAddress}
+            keyboardType="default"
+          />
+          
+          <Button
+            title="💼 Continue with Address"
+            onPress={handleWalletConnect}
+            disabled={isConnecting}
+            loading={isConnecting}
+            variant="outline"
+            size="lg"
+            fullWidth
+          />
+        </View>
+
+        {/* Demo Mode Section */}
+        <View style={[styles.divider, { marginVertical: Spacing.xl }]}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>OR</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Demo Mode</Text>
+          <Text style={styles.sectionDescription}>
+            Try the app without a wallet
+          </Text>
+          
+          <Input
+            label="Phone Number"
+            placeholder="+256 XXX XXX XXX"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            keyboardType="phone-pad"
+          />
+          
+          <Button
+            title="Login with Phone"
+            onPress={handlePhoneLogin}
+            disabled={isConnecting}
+            loading={isConnecting}
+            variant="ghost"
+            size="lg"
+            fullWidth
+          />
+        </View>
+      </Card>
+
+      {/* Network Info Card */}
+      <Card style={styles.infoCard} variant="outlined">
+        <View style={styles.networkInfo}>
+          <Text style={styles.networkBadge}>🔗 Celo Sepolia Testnet</Text>
+          <Text style={styles.infoText}>
+            Get test CELO from the{' '}
+            <Text 
+              style={styles.link}
+              onPress={() => Linking.openURL('https://celo-sepolia-faucet.vercel.app')}
+            >
+              testnet faucet
+            </Text>
+          </Text>
+        </View>
+      </Card>
+
+      {/* Footer */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
+          Play trivia games, compete with others, and earn rewards on Celo blockchain
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -248,107 +296,89 @@ export default function AuthScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: Colors.background,
+    padding: Spacing.lg,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.xl,
+  },
+  headerSection: {
+    marginBottom: Spacing['3xl'],
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    paddingTop: 60,
-    paddingBottom: 40,
   },
   title: {
-    fontSize: 42,
-    fontWeight: 'bold',
-    color: '#00ff00',
-    marginBottom: 10,
+    fontSize: Typography.fontSize['3xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.primary,
+    marginBottom: Spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#999',
-    marginBottom: 30,
+    fontSize: Typography.fontSize.lg,
+    color: Colors.onSurfaceVariant,
+    textAlign: 'center',
   },
-  loginBox: {
+  card: {
+    marginBottom: Spacing.xl,
     width: '100%',
-    backgroundColor: '#2a2a2a',
-    borderRadius: 15,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#00ff00',
   },
-  label: {
-    fontSize: 14,
-    color: '#fff',
-    marginBottom: 5,
-    marginTop: 15,
-    fontWeight: '600',
+  section: {
+    marginBottom: Spacing.xl,
   },
-  sublabel: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 10,
-    fontStyle: 'italic',
+  sectionTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.onSurface,
+    marginBottom: Spacing.sm,
   },
-  input: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 8,
-    padding: 15,
-    color: '#fff',
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#444',
-  },
-  button: {
-    backgroundColor: '#00ff00',
-    borderRadius: 8,
-    padding: 15,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  buttonGreen: {
-    backgroundColor: '#00ff00',
-  },
-  buttonSecondary: {
-    backgroundColor: '#0088ff',
-  },
-  buttonMetaMask: {
-    backgroundColor: '#F6851B',
-  },
-  buttonMiniPay: {
-    backgroundColor: '#FCFF52',
-  },
-  buttonText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  buttonTextWhite: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  buttonTextDark: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: 'bold',
+  sectionDescription: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.onSurfaceVariant,
+    marginBottom: Spacing.lg,
   },
   divider: {
-    textAlign: 'center',
-    color: '#666',
-    marginVertical: 15,
-    fontSize: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.outline,
+  },
+  dividerText: {
+    marginHorizontal: Spacing.md,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.onSurfaceVariant,
+  },
+  infoCard: {
+    marginBottom: Spacing.lg,
+    width: '100%',
   },
   networkInfo: {
-    marginTop: 20,
     alignItems: 'center',
   },
-  networkText: {
-    color: '#666',
-    fontSize: 12,
-    marginTop: 5,
+  networkBadge: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.secondary,
+    marginBottom: Spacing.sm,
   },
-  info: {
-    marginTop: 20,
+  infoText: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.onSurfaceVariant,
     textAlign: 'center',
-    color: '#666',
-    fontSize: 12,
+  },
+  link: {
+    color: Colors.secondary,
+    fontWeight: Typography.fontWeight.semibold,
+    textDecorationLine: 'underline',
+  },
+  footer: {
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.onSurfaceVariant,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
