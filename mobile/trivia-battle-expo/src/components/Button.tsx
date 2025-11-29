@@ -99,9 +99,9 @@ export const Button: React.FC<ButtonProps> = ({
 
     return {
       fontSize: Typography.fontSize.base,
-      fontWeight: Typography.fontWeight.semibold,
+      fontWeight: Typography.fontWeight.semibold as any,
       ...variants[variant],
-    };
+    } as TextStyle;
   };
 
   return (
