@@ -122,65 +122,470 @@ Your App                 Wallet App (MetaMask)
 
 ### Implementation Steps
 
-1. **Install WalletConnect v2:**
-   ```bash
-   npm install @walletconnect/react-native-compat @walletconnect/web3wallet
+#### Step 1: Install Dependencies
+
+```bash
+npm install @walletconnect/react-native-compat @walletconnect/web3wallet ethers
+```
+
+For Expo projects specifically:
+```bash
+npx expo install expo-random expo-web-browser
+```
+
+#### Step 2: Create WalletConnect Service
+
+Create `src/services/walletConnectService.ts`:
+
+```typescript
+import { EthereumProvider } from '@walletconnect/ethereum-provider';
+import { ethers } from 'ethers';
+
+export interface WalletConnectConfig {
+  projectId: string;
+  chains: number[];
+  methods: string[];
+  events: string[];
+}
+
+export class WalletConnectService {
+  private provider: EthereumProvider | null = null;
+  private signer: ethers.Signer | null = null;
+  private address: string | null = null;
+  
+  // Configuration
+  private projectId: string;
+  private chains: number[];
+
+  constructor(projectId: string, chains: number[] = [11142220]) {
+    this.projectId = projectId;
+    this.chains = chains;
+  }
+
+  /**
+   * Initialize WalletConnect provider
+   */
+  async initialize(): Promise<void> {
+    try {
+      this.provider = await EthereumProvider.init({
+        projectId: this.projectId,
+        chains: this.chains,
+        methods: [
+          'eth_sendTransaction',
+          'eth_signMessage',
+          'personal_sign',
+          'eth_sign',
+        ],
+        events: [
+          'chainChanged',
+          'accountsChanged',
+          'session_update',
+          'connect',
+          'disconnect',
+        ],
+        showQrModal: true,
+        rpcMap: {
+          11142220: 'https://celo-sepolia-rpc.publicnode.com', // Celo Sepolia
+        },
+      });
+
+      // Setup event listeners
+      this.setupListeners();
+    } catch (error) {
+      console.error('WalletConnect initialization failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Connect to wallet via QR code
+   */
+  async connect(): Promise<string> {
+    if (!this.provider) {
+      throw new Error('WalletConnect not initialized. Call initialize() first.');
+    }
+
+    try {
+      const accounts = await this.provider.request({
+        method: 'eth_requestAccounts',
+      }) as string[];
+
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No accounts found');
+      }
+
+      this.address = accounts[0];
+      
+      // Setup ethers provider and signer
+      const ethersProvider = new ethers.BrowserProvider(this.provider as any);
+      this.signer = await ethersProvider.getSigner();
+
+      console.log('Connected to:', this.address);
+      return this.address;
+    } catch (error) {
+      console.error('WalletConnect connection failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Disconnect from wallet
+   */
+  async disconnect(): Promise<void> {
+    if (!this.provider) return;
+
+    try {
+      await this.provider.disconnect();
+      this.address = null;
+      this.signer = null;
+      console.log('Disconnected from WalletConnect');
+    } catch (error) {
+      console.error('Disconnect failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if connected
+   */
+  isConnected(): boolean {
+    return this.address !== null && this.provider?.connected === true;
+  }
+
+  /**
+   * Get current address
+   */
+  getAddress(): string | null {
+    return this.address;
+  }
+
+  /**
+   * Sign a message
+   */
+  async signMessage(message: string): Promise<string> {
+    if (!this.signer || !this.address) {
+      throw new Error('Not connected to wallet');
+    }
+
+    try {
+      const signature = await this.signer.signMessage(message);
+      return signature;
+    } catch (error) {
+      console.error('Message signing failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send a transaction
+   */
+  async sendTransaction(to: string, value: string, data?: string): Promise<string> {
+    if (!this.provider || !this.address) {
+      throw new Error('Not connected to wallet');
+    }
+
+    try {
+      const txHash = await this.provider.request({
+        method: 'eth_sendTransaction',
+        params: [
+          {
+            from: this.address,
+            to: to,
+            value: ethers.toBeHex(ethers.parseEther(value)),
+            data: data || '0x',
+          },
+        ],
+      }) as string;
+
+      return txHash;
+    } catch (error) {
+      console.error('Transaction failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get balance
+   */
+  async getBalance(): Promise<string> {
+    if (!this.address || !this.provider) {
+      throw new Error('Not connected to wallet');
+    }
+
+    try {
+      const ethersProvider = new ethers.BrowserProvider(this.provider as any);
+      const balance = await ethersProvider.getBalance(this.address);
+      return ethers.formatEther(balance);
+    } catch (error) {
+      console.error('Balance fetch failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Setup event listeners
+   */
+  private setupListeners(): void {
+    if (!this.provider) return;
+
+    this.provider.on('accountsChanged', (accounts: string[]) => {
+      console.log('Accounts changed:', accounts);
+      this.address = accounts[0] || null;
+    });
+
+    this.provider.on('chainChanged', (chainId: string) => {
+      console.log('Chain changed:', chainId);
+      // Handle chain change
+    });
+
+    this.provider.on('disconnect', () => {
+      console.log('Disconnected from WalletConnect');
+      this.address = null;
+      this.signer = null;
+    });
+
+    this.provider.on('connect', () => {
+      console.log('Connected to WalletConnect');
+    });
+  }
+}
+
+// Singleton instance
+let walletConnectService: WalletConnectService | null = null;
+
+export function getWalletConnectService(projectId: string): WalletConnectService {
+  if (!walletConnectService) {
+    walletConnectService = new WalletConnectService(projectId);
+  }
+  return walletConnectService;
+}
+```
+
+#### Step 3: Create React Hook
+
+Create `src/hooks/useWalletConnect.ts`:
+
+```typescript
+import { useState, useEffect, useCallback } from 'react';
+import { getWalletConnectService, WalletConnectService } from '../services/walletConnectService';
+
+interface UseWalletConnectState {
+  address: string | null;
+  isConnected: boolean;
+  isConnecting: boolean;
+  isInitialized: boolean;
+  error: Error | null;
+  connect: () => Promise<void>;
+  disconnect: () => Promise<void>;
+  signMessage: (message: string) => Promise<string>;
+  sendTransaction: (to: string, value: string) => Promise<string>;
+  getBalance: () => Promise<string>;
+}
+
+export function useWalletConnect(projectId: string): UseWalletConnectState {
+  const [address, setAddress] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const service = getWalletConnectService(projectId);
+
+  // Initialize WalletConnect on mount
+  useEffect(() => {
+    const initWalletConnect = async () => {
+      try {
+        await service.initialize();
+        setIsInitialized(true);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to initialize'));
+      }
+    };
+
+    initWalletConnect();
+  }, []);
+
+  const connect = useCallback(async () => {
+    try {
+      setIsConnecting(true);
+      setError(null);
+      const addr = await service.connect();
+      setAddress(addr);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Connection failed');
+      setError(error);
+      throw error;
+    } finally {
+      setIsConnecting(false);
+    }
+  }, []);
+
+  const disconnect = useCallback(async () => {
+    try {
+      await service.disconnect();
+      setAddress(null);
+      setError(null);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Disconnect failed');
+      setError(error);
+      throw error;
+    }
+  }, []);
+
+  const signMessage = useCallback(async (message: string) => {
+    try {
+      setError(null);
+      return await service.signMessage(message);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Signing failed');
+      setError(error);
+      throw error;
+    }
+  }, []);
+
+  const sendTransaction = useCallback(async (to: string, value: string) => {
+    try {
+      setError(null);
+      return await service.sendTransaction(to, value);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Transaction failed');
+      setError(error);
+      throw error;
+    }
+  }, []);
+
+  const getBalance = useCallback(async () => {
+    try {
+      setError(null);
+      return await service.getBalance();
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Balance fetch failed');
+      setError(error);
+      throw error;
+    }
+  }, []);
+
+  return {
+    address,
+    isConnected: service.isConnected(),
+    isConnecting,
+    isInitialized,
+    error,
+    connect,
+    disconnect,
+    signMessage,
+    sendTransaction,
+    getBalance,
+  };
+}
+```
+
+#### Step 4: Update Environment Configuration
+
+Add to `.env`:
+
+```env
+# WalletConnect Configuration (required for production)
+WALLET_CONNECT_PROJECT_ID=your_project_id_here
+
+# Get your Project ID from: https://cloud.walletconnect.com
+# 1. Sign up / Login
+# 2. Create new project
+# 3. Copy Project ID
+# 4. Paste here
+```
+
+#### Step 5: Update AuthScreen to Use WalletConnect
+
+```typescript
+import { useWalletConnect } from '../hooks/useWalletConnect';
+
+export default function AuthScreen() {
+  const projectId = process.env.EXPO_PUBLIC_WALLET_CONNECT_PROJECT_ID || '';
+  const wallet = useWalletConnect(projectId);
+
+  const handleWalletConnect = async () => {
+    try {
+      if (!wallet.isInitialized) {
+        Alert.alert('Error', 'WalletConnect is initializing. Please try again.');
+        return;
+      }
+
+      await wallet.connect();
+      
+      Alert.alert(
+        'Connected!',
+        `Address: ${wallet.address?.slice(0, 6)}...${wallet.address?.slice(-4)}`,
+        [{ text: 'Continue', onPress: () => navigation.replace('Main') }]
+      );
+    } catch (error: any) {
+      Alert.alert('Connection Failed', error.message);
+    }
+  };
+
+  return (
+    <Button
+      title="🔗 Connect with WalletConnect"
+      onPress={handleWalletConnect}
+      disabled={!wallet.isInitialized}
+      loading={wallet.isConnecting}
+    />
+  );
+}
+```
+
+#### Step 6: Get WalletConnect Project ID
+
+1. Visit: https://cloud.walletconnect.com
+2. Sign up or login
+3. Create a new project
+4. Copy the **Project ID**
+5. Add to your `.env` file:
+   ```env
+   WALLET_CONNECT_PROJECT_ID=abc123def456...
    ```
 
-2. **Create WalletConnect Service:**
-   ```typescript
-   // src/services/walletConnectService.ts
-   import { EthereumProvider } from '@walletconnect/ethereum-provider';
+### Testing WalletConnect Integration
 
-   export class WalletConnectService {
-     private provider: EthereumProvider | null = null;
+```typescript
+// Simple test component
+function WalletConnectTest() {
+  const wallet = useWalletConnect('YOUR_PROJECT_ID');
 
-     async initialize() {
-       this.provider = await EthereumProvider.init({
-         projectId: 'YOUR_WALLET_CONNECT_PROJECT_ID', // Get from https://cloud.walletconnect.com
-         chains: [11142220], // Celo Sepolia
-         methods: ['eth_sendTransaction', 'eth_signMessage', 'personal_sign'],
-         events: ['chainChanged', 'accountsChanged'],
-         showQrModal: true,
-       });
-     }
+  return (
+    <View>
+      {!wallet.isConnected ? (
+        <Button title="Connect Wallet" onPress={wallet.connect} />
+      ) : (
+        <>
+          <Text>Connected: {wallet.address}</Text>
+          <Button
+            title="Sign Message"
+            onPress={async () => {
+              const sig = await wallet.signMessage('Hello WalletConnect!');
+              console.log('Signature:', sig);
+            }}
+          />
+          <Button title="Disconnect" onPress={wallet.disconnect} />
+        </>
+      )}
+    </View>
+  );
+}
+```
 
-     async connect() {
-       const accounts = await this.provider?.request({
-         method: 'eth_requestAccounts',
-       });
-       return accounts?.[0];
-     }
+### WalletConnect Supported Wallets
 
-     async sendTransaction(tx: any) {
-       return this.provider?.request({
-         method: 'eth_sendTransaction',
-         params: [tx],
-       });
-     }
-   }
-   ```
+Once integrated, users can connect with:
 
-3. **Update AuthScreen to use WalletConnect:**
-   ```typescript
-   const handleWalletConnectConnect = async () => {
-     try {
-       const service = new WalletConnectService();
-       await service.initialize();
-       const address = await service.connect();
-       // Connected!
-     } catch (error) {
-       console.error('WalletConnect connection failed', error);
-     }
-   };
-   ```
+- ✅ MetaMask Mobile
+- ✅ Trust Wallet
+- ✅ Coinbase Wallet
+- ✅ Rainbow Wallet
+- ✅ WalletConnect
+- ✅ Argent
+- ✅ Ledger Live
+- ✅ And 100+ more wallets
 
-4. **Get ProjectId:**
-   - Go to https://cloud.walletconnect.com
-   - Sign up/Login
-   - Create a new project
-   - Copy your Project ID
-   - Add to your app config
+All from a simple QR code scan!
 
 ### WalletConnect vs Current Solution
 
