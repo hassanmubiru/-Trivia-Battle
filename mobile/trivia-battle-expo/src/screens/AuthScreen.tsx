@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.fontSize['3xl'],
-    fontWeight: Typography.fontWeight.bold,
+    fontWeight: Typography.fontWeight.bold as any,
     color: Colors.primary,
     marginBottom: Spacing.sm,
   },
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semibold,
+    fontWeight: Typography.fontWeight.semibold as any,
     color: Colors.onSurface,
     marginBottom: Spacing.sm,
   },
