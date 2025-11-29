@@ -11,14 +11,13 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { miniPayService } from '../services/miniPayService';
-import { useWalletConnect } from '../hooks/useWalletConnect';
+import { useMetaMask } from '../hooks/useMetaMask';
 import { Button, Card, Input } from '../components';
 import { Colors, Typography, Spacing, BorderRadius } from '../constants/theme';
 
 export default function AuthScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber] = useState('');
-  const projectId = process.env.EXPO_PUBLIC_WALLET_CONNECT_PROJECT_ID || '';
-  const walletConnect = useWalletConnect(projectId);
+  const metaMask = useMetaMask();
 
   useEffect(() => {
     // Check if already authenticated
@@ -34,15 +33,15 @@ export default function AuthScreen({ navigation }: any) {
   // Auto-navigate when wallet connects
   useEffect(() => {
     const handleWalletConnect = async () => {
-      if (walletConnect.isConnected && walletConnect.address) {
+      if (metaMask.isConnected && metaMask.address) {
         try {
-          await AsyncStorage.setItem('walletAddress', walletConnect.address);
-          await AsyncStorage.setItem('walletType', 'walletconnect');
+          await AsyncStorage.setItem('walletAddress', metaMask.address);
+          await AsyncStorage.setItem('walletType', 'metamask');
           await AsyncStorage.setItem('isAuthenticated', 'true');
           
           Alert.alert(
             '✓ Connected!',
-            `Wallet: ${walletConnect.address.slice(0, 6)}...${walletConnect.address.slice(-4)}`,
+            `Wallet: ${metaMask.address.slice(0, 6)}...${metaMask.address.slice(-4)}`,
             [{ text: 'Continue', onPress: () => navigation.replace('Main') }]
           );
         } catch (error) {
@@ -52,7 +51,7 @@ export default function AuthScreen({ navigation }: any) {
     };
     
     handleWalletConnect();
-  }, [walletConnect.isConnected, walletConnect.address]);
+  }, [metaMask.isConnected, metaMask.address]);
 
   const handlePhoneLogin = async () => {
     if (phoneNumber.length < 10) {
@@ -69,32 +68,10 @@ export default function AuthScreen({ navigation }: any) {
     }
   };
 
-  const handleWalletConnectMetaMask = async () => {
-    if (!projectId) {
-      Alert.alert(
-        'Configuration Required',
-        'WalletConnect Project ID not configured.\n\n' +
-        'Steps:\n' +
-        '1. Go to: cloud.walletconnect.com\n' +
-        '2. Create a free account\n' +
-        '3. Get a Project ID\n' +
-        '4. Add to .env:\n' +
-        '   EXPO_PUBLIC_WALLET_CONNECT_PROJECT_ID=your-id\n' +
-        '5. Restart the app',
-        [
-          {
-            text: 'Open WalletConnect Cloud',
-            onPress: () => Linking.openURL('https://cloud.walletconnect.com'),
-          },
-          { text: 'OK', style: 'cancel' },
-        ]
-      );
-      return;
-    }
-
+  const handleMetaMaskConnect = async () => {
     try {
-      // This will open MetaMask app directly
-      await walletConnect.connect();
+      // This will show MetaMask permission dialog in the app
+      await metaMask.connect();
     } catch (error: any) {
       console.error('Connection error:', error);
       Alert.alert(
@@ -150,20 +127,20 @@ export default function AuthScreen({ navigation }: any) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Connect Your Wallet</Text>
           
-          {/* Primary: WalletConnect MetaMask */}
+          {/* Primary: Direct MetaMask */}
           <Button
-            title={walletConnect.isConnecting ? '⏳ Connecting...' : '🦊 Connect MetaMask via WalletConnect'}
-            onPress={handleWalletConnectMetaMask}
-            disabled={walletConnect.isConnecting}
-            loading={walletConnect.isConnecting}
+            title={metaMask.isConnecting ? '⏳ Connecting...' : '🦊 Connect MetaMask'}
+            onPress={handleMetaMaskConnect}
+            disabled={metaMask.isConnecting}
+            loading={metaMask.isConnecting}
             variant="primary"
             size="lg"
             fullWidth
           />
 
-          {walletConnect.error && (
+          {metaMask.error && (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>⚠️ {walletConnect.error.message}</Text>
+              <Text style={styles.errorText}>⚠️ {metaMask.error.message}</Text>
             </View>
           )}
 

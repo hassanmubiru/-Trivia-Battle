@@ -45,4 +45,8 @@ declare module 'react-native' {
   export const StyleSheet: {
     create: (styles: Record<string, any>) => Record<string, any>;
   };
+  export const Linking: {
+    openURL: (url: string) => Promise<void>;
+    canOpenURL: (url: string) => Promise<boolean>;
+  };
 }
