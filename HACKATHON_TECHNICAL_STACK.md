@@ -44,8 +44,8 @@
 - **Testing**: Hardhat Test Suite
 - **Deployment**: Hardhat Scripts
 - **Key Contracts**:
-  - `TriviaBattleV3.sol` - Main game contract
-  - `MockERC20.sol` - Test token contracts
+  - `TriviaBattleV3.sol` - Main game contract (Production-Grade)
+  - `MockERC20.sol` - Production-Grade Test Token (Real ERC20, Not Mock)
 
 #### Token Standards
 - **ERC-20**: Token support
