@@ -5,9 +5,9 @@
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "strict": false,
-    "typeRoots": ["."],
     "noEmit": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "types": ["react", "react-native"]
   },
   "extends": "expo/tsconfig.base",
   "exclude": ["node_modules", "dist", "build"]
