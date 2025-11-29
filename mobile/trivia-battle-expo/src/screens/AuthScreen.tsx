@@ -126,16 +126,14 @@ export default function AuthScreen({ navigation }: any) {
       if (wallet.isConnected) {
         await AsyncStorage.setItem('isAuthenticated', 'true');
         
-        const canSignText = wallet.canSign ? '\n✓ Ready to sign transactions' : '\n(Read-only mode)';
-        
         Alert.alert(
-          'Connected!',
-          `Wallet connected successfully!${canSignText}\n\nCELO: ${parseFloat(wallet.balances.CELO).toFixed(4)}\ncUSD: ${parseFloat(wallet.balances.cUSD).toFixed(2)}`,
-          [{ text: 'Continue', onPress: () => navigation.replace('Main') }]
+          '✓ Connected!',
+          `Wallet: ${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}\n✓ Ready to sign transactions\n\nCELO: ${parseFloat(wallet.balances.CELO).toFixed(4)}\ncUSD: ${parseFloat(wallet.balances.cUSD).toFixed(2)}`,
+          [{ text: 'Play Games', onPress: () => navigation.replace('Main') }]
         );
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to connect wallet');
+      Alert.alert('Connection Error', error.message || 'Failed to connect wallet');
     } finally {
       setIsConnecting(false);
     }
@@ -264,8 +262,15 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     color: '#fff',
-    marginBottom: 8,
-    marginTop: 10,
+    marginBottom: 5,
+    marginTop: 15,
+    fontWeight: '600',
+  },
+  sublabel: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 10,
+    fontStyle: 'italic',
   },
   input: {
     backgroundColor: '#1a1a1a',
