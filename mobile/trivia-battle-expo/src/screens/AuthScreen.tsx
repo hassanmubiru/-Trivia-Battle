@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
   },
   networkBadge: {
     fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
+    fontWeight: Typography.fontWeight.semibold as any,
     color: Colors.secondary,
     marginBottom: Spacing.sm,
   },
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   },
   link: {
     color: Colors.secondary,
-    fontWeight: Typography.fontWeight.semibold,
+    fontWeight: Typography.fontWeight.semibold as any,
     textDecorationLine: 'underline',
   },
   footer: {
