@@ -11,6 +11,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { miniPayService } from '../services/miniPayService';
+import { useWalletConnect } from '../hooks/useWalletConnect';
 import { Button, Card, Input } from '../components';
 import { Colors, Typography, Spacing, BorderRadius } from '../constants/theme';
 
