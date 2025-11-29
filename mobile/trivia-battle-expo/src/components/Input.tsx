@@ -69,7 +69,7 @@ export const Input: React.FC<InputProps> = ({
         <Text
           style={{
             fontSize: Typography.fontSize.sm,
-            fontWeight: Typography.fontWeight.semibold,
+            fontWeight: Typography.fontWeight.semibold as any,
             color: Colors.onSurface,
             marginBottom: Spacing.sm,
           }}
