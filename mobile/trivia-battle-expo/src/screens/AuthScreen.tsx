@@ -150,23 +150,6 @@ export default function AuthScreen({ navigation }: any) {
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Demo Mode */}
-          <Button
-            title="🧪 Demo Mode (Testing)"
-            onPress={handleDemoModeConnect}
-            disabled={metaMask.isConnecting}
-            loading={false}
-            variant="secondary"
-            size="lg"
-            fullWidth
-          />
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
           {/* Secondary: MiniPay */}
           <Button
             title="📱 Connect with MiniPay (Celo)"
@@ -182,7 +165,7 @@ export default function AuthScreen({ navigation }: any) {
           <View style={styles.infoBox}>
             <Text style={styles.infoTitle}>💡 Wallet Options:</Text>
             <Text style={styles.infoText}>
-              • <Text style={styles.bold}>MetaMask</Text> - WalletConnect v2, 100+ wallets
+              • <Text style={styles.bold}>MetaMask</Text> - Direct SDK connection
             </Text>
             <Text style={styles.infoText}>
               • <Text style={styles.bold}>MiniPay</Text> - Celo native wallet (mobile)
