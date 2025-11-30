@@ -11,6 +11,26 @@ try {
   // Crypto polyfill already loaded
 }
 
+// Suppress MetaMask SDK batch sender errors early
+// These occur when the SDK tries to communicate before wallet is connected
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  const message = args[0]?.toString?.() || '';
+  if (message.includes('Sender: Failed to send batch') || 
+      message.includes('Failed to send batch') ||
+      message.includes('[object Object]')) {
+    return; // Suppress expected MetaMask SDK errors
+  }
+  originalConsoleError.apply(console, args);
+};
+
+import { LogBox } from 'react-native';
+LogBox.ignoreLogs([
+  'Sender: Failed to send batch',
+  'Failed to send batch',
+  'MM_SDK',
+]);
+
 import { registerRootComponent } from 'expo';
 
 import App from './App';
