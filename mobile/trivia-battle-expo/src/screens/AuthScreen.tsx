@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { miniPayService } from '../services/miniPayService';
+import { useMiniPay } from '../hooks/useMiniPay';
 import { useMetaMaskSDK } from '../hooks/useMetaMaskSDK';
 import { Button, Card, Input } from '../components';
 import { Colors, Typography, Spacing, BorderRadius } from '../constants/theme';
@@ -21,6 +21,7 @@ import { Colors, Typography, Spacing, BorderRadius } from '../constants/theme';
 export default function AuthScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const metaMask = useMetaMaskSDK();
+  const miniPay = useMiniPay();
 
   useEffect(() => {
     // Check if already authenticated
@@ -33,7 +34,7 @@ export default function AuthScreen({ navigation }: any) {
     checkAuth();
   }, [navigation]);
 
-  // Auto-navigate when wallet connects
+  // Auto-navigate when MetaMask connects
   useEffect(() => {
     const handleWalletConnect = async () => {
       if (metaMask.isConnected && metaMask.address) {
@@ -55,6 +56,29 @@ export default function AuthScreen({ navigation }: any) {
     
     handleWalletConnect();
   }, [metaMask.isConnected, metaMask.address]);
+
+  // Auto-navigate when MiniPay connects
+  useEffect(() => {
+    const handleMiniPayConnect = async () => {
+      if (miniPay.isConnected && miniPay.address) {
+        try {
+          await AsyncStorage.setItem('walletAddress', miniPay.address);
+          await AsyncStorage.setItem('walletType', miniPay.isMiniPay ? 'minipay' : 'injected');
+          await AsyncStorage.setItem('isAuthenticated', 'true');
+          
+          Alert.alert(
+            miniPay.isMiniPay ? '✓ MiniPay Connected!' : '✓ Wallet Connected!',
+            `CELO: ${parseFloat(miniPay.balances.CELO).toFixed(4)}\ncUSD: ${parseFloat(miniPay.balances.cUSD).toFixed(2)}`,
+            [{ text: 'Continue', onPress: () => navigation.replace('Main') }]
+          );
+        } catch (error) {
+          console.error('Error saving wallet:', error);
+        }
+      }
+    };
+    
+    handleMiniPayConnect();
+  }, [miniPay.isConnected, miniPay.address]);
 
   const handlePhoneLogin = async () => {
     if (phoneNumber.length < 10) {
@@ -86,31 +110,30 @@ export default function AuthScreen({ navigation }: any) {
 
   const handleMiniPayConnect = async () => {
     try {
-      if (!miniPayService.isMiniPayEnvironment()) {
+      // Check if running in MiniPay or has injected provider
+      if (miniPay.isMiniPayEnvironment) {
+        // Direct MiniPay connection
+        await miniPay.connect();
+      } else if (miniPay.canSign || typeof window !== 'undefined' && (window as any).ethereum) {
+        // Has some web3 provider, try to connect
+        await miniPay.connect();
+      } else {
+        // No provider available, offer options
         Alert.alert(
-          'MiniPay Not Available',
-          'Open this app in Opera MiniPay wallet to use MiniPay connection.\n\n' +
-          'Alternative: Use MetaMask via WalletConnect',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      const walletState = await miniPayService.connect();
-      
-      if (walletState.isConnected && walletState.address) {
-        await AsyncStorage.setItem('walletAddress', walletState.address);
-        await AsyncStorage.setItem('walletType', 'minipay');
-        await AsyncStorage.setItem('isAuthenticated', 'true');
-        
-        Alert.alert(
-          '✓ Connected!',
-          `CELO: ${parseFloat(walletState.balances.CELO).toFixed(4)}\ncUSD: ${parseFloat(walletState.balances.cUSD).toFixed(2)}`,
-          [{ text: 'Continue', onPress: () => navigation.replace('Main') }]
+          'Wallet Required',
+          'To play with real crypto, you need a Web3 wallet.\n\n' +
+          '📱 MiniPay - Best for Celo (Android, Africa)\n' +
+          '🦊 MetaMask - Universal Web3 wallet',
+          [
+            { text: 'Open MiniPay', onPress: () => miniPay.openMiniPay() },
+            { text: 'Use MetaMask', onPress: handleMetaMaskConnect },
+            { text: 'Cancel', style: 'cancel' },
+          ]
         );
       }
     } catch (error: any) {
-      Alert.alert('MiniPay Error', error.message || 'Failed to connect');
+      console.error('MiniPay error:', error);
+      // Error handling is done in the hook
     }
   };
 
@@ -155,14 +178,20 @@ export default function AuthScreen({ navigation }: any) {
 
           {/* Secondary: MiniPay */}
           <Button
-            title="📱 Connect with MiniPay (Celo)"
+            title={miniPay.isConnecting ? '⏳ Connecting...' : miniPay.isMiniPayEnvironment ? '📱 Connect with MiniPay' : '📱 Connect Wallet (Celo)'}
             onPress={handleMiniPayConnect}
-            disabled={false}
-            loading={false}
+            disabled={miniPay.isConnecting}
+            loading={miniPay.isConnecting}
             variant="secondary"
             size="lg"
             fullWidth
           />
+
+          {miniPay.isMiniPayEnvironment && (
+            <View style={styles.miniPayBadge}>
+              <Text style={styles.miniPayBadgeText}>✓ MiniPay Detected</Text>
+            </View>
+          )}
 
           {/* Info */}
           <View style={styles.infoBox}>
@@ -171,7 +200,10 @@ export default function AuthScreen({ navigation }: any) {
               • <Text style={styles.bold}>MetaMask</Text> - Direct SDK connection
             </Text>
             <Text style={styles.infoText}>
-              • <Text style={styles.bold}>MiniPay</Text> - Celo native wallet (mobile)
+              • <Text style={styles.bold}>MiniPay</Text> - Celo native wallet (Africa)
+            </Text>
+            <Text style={styles.infoText}>
+              • <Text style={styles.bold}>Any Web3</Text> - Browser injected wallet
             </Text>
           </View>
         </View>
@@ -382,5 +414,18 @@ const styles = StyleSheet.create({
     color: Colors.onSurfaceVariant,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  miniPayBadge: {
+    backgroundColor: '#e8f5e9',
+    borderRadius: BorderRadius.sm,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    alignSelf: 'center',
+    marginTop: Spacing.sm,
+  },
+  miniPayBadgeText: {
+    fontSize: Typography.fontSize.sm,
+    color: '#2e7d32',
+    fontWeight: Typography.fontWeight.medium as any,
   },
 });
