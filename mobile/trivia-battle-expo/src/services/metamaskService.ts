@@ -16,19 +16,20 @@ export class MetaMaskService {
   private provider: ethers.JsonRpcProvider | null = null;
   private signer: ethers.Signer | null = null;
   private address: string | null = null;
-  private chainId: number = 11142220; // Celo Sepolia
+  private chainId: number = 44787; // Celo Sepolia
   private listeners: Map<string, Function[]> = new Map();
-  private rpcUrl: string = 'https://celo-sepolia-rpc.publicnode.com';
+  private rpcUrl: string = 'https://celo-sepolia.drpc.org';
 
   constructor() {
-    this.initializeProvider();
+    // Don't initialize provider in constructor - use lazy initialization
+    // This prevents RPC calls on app startup before wallet connection
   }
 
   /**
-   * Initialize provider from MetaMask or create JSON-RPC provider
+   * Get or create provider lazily
    */
-  private initializeProvider(): void {
-    try {
+  private getOrCreateProvider(): ethers.JsonRpcProvider {
+    if (!this.provider) {
       // Try to get injected ethereum from MetaMask Mobile
       const globalObj = global as any;
       
@@ -40,16 +41,24 @@ export class MetaMaskService {
         console.log('[MetaMask] No injected provider, using JSON-RPC');
       }
 
-      // Always create a JSON-RPC provider for direct RPC calls
-      this.provider = new ethers.JsonRpcProvider(this.rpcUrl, {
-        chainId: this.chainId,
-        name: 'Celo Sepolia',
-      });
+      // Create a JSON-RPC provider with staticNetwork to prevent auto-detection
+      this.provider = new ethers.JsonRpcProvider(
+        this.rpcUrl, 
+        { chainId: this.chainId, name: 'Celo Sepolia' },
+        { staticNetwork: true }
+      );
 
-      console.log('[MetaMask] Provider initialized with RPC endpoint');
-    } catch (error) {
-      console.error('[MetaMask] Provider initialization error:', error);
+      console.log('[MetaMask] Provider initialized with RPC endpoint (lazy)');
     }
+    return this.provider;
+  }
+
+  /**
+   * Initialize provider from MetaMask or create JSON-RPC provider
+   * @deprecated Use getOrCreateProvider() for lazy initialization
+   */
+  private initializeProvider(): void {
+    this.getOrCreateProvider();
   }
 
   /**

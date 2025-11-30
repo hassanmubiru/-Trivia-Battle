@@ -66,10 +66,10 @@ const DEFAULT_CONFIG: MetaMaskConfig = {
 
 // Celo Sepolia Network Configuration
 const CELO_SEPOLIA = {
-  chainId: 11142220,
-  chainIdHex: '0xaa36a7',
+  chainId: 44787,
+  chainIdHex: '0xaef3',
   name: 'Celo Sepolia Testnet',
-  rpcUrl: 'https://celo-sepolia-rpc.publicnode.com',
+  rpcUrl: 'https://celo-sepolia.drpc.org',
   blockExplorer: 'https://celo-sepolia.blockscout.com',
   symbol: 'CELO',
   decimals: 18,
@@ -78,17 +78,17 @@ const CELO_SEPOLIA = {
 // Token Addresses on Celo Sepolia
 const TOKENS = {
   cUSD: {
-    address: '0xc2FB5a20d07036d828cBbF2FCEE5cea02cc9Cb2f',
+    address: '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1',
     decimals: 18,
     symbol: 'cUSD',
   },
   USDC: {
-    address: '0x360Da2CcFE307B5CB0330d062d8D83B721811B76',
+    address: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B',
     decimals: 6,
     symbol: 'USDC',
   },
   USDT: {
-    address: '0xE5eA34847A04d197B22652be1Dc8FbFf11392239',
+    address: '0xE4D517785D091D3c54818832dB6094bcc2744545',
     decimals: 6,
     symbol: 'USDT',
   },
@@ -130,6 +130,7 @@ class Logger {
 }
 
 class MetaMaskWalletService {
+  private _readOnlyProvider: ethers.JsonRpcProvider | null = null;
   private provider: ethers.JsonRpcProvider | ethers.BrowserProvider | null = null;
   private signer: ethers.Signer | null = null;
   private walletAddress: string | null = null;
@@ -147,22 +148,22 @@ class MetaMaskWalletService {
   constructor(config: Partial<MetaMaskConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.logger = new Logger(this.config.enableDebugLogging);
-    this.initializeReadOnlyProvider();
+    // Don't initialize provider in constructor - use lazy initialization
   }
 
   /**
-   * Initialize read-only provider
+   * Get or create read-only provider (lazy initialization)
    */
-  private initializeReadOnlyProvider(): void {
-    try {
-      this.provider = new ethers.JsonRpcProvider(
+  private getReadOnlyProvider(): ethers.JsonRpcProvider {
+    if (!this._readOnlyProvider) {
+      this._readOnlyProvider = new ethers.JsonRpcProvider(
         CELO_SEPOLIA.rpcUrl,
-        { chainId: CELO_SEPOLIA.chainId, name: CELO_SEPOLIA.name }
+        { chainId: CELO_SEPOLIA.chainId, name: CELO_SEPOLIA.name },
+        { staticNetwork: true }
       );
-      this.logger.debug('MetaMask', 'Read-only provider initialized');
-    } catch (error) {
-      this.logger.error('MetaMask', 'Failed to initialize read-only provider', error);
+      this.logger.debug('MetaMask', 'Read-only provider initialized (lazy)');
     }
+    return this._readOnlyProvider;
   }
 
   /**

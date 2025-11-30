@@ -9,9 +9,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Celo Sepolia Testnet configuration
 const CELO_SEPOLIA = {
-  chainId: 11142220,
-  chainIdHex: '0xaa36a7',
-  rpcUrl: 'https://celo-sepolia-rpc.publicnode.com',
+  chainId: 44787,
+  chainIdHex: '0xaef3',
+  rpcUrl: 'https://celo-sepolia.drpc.org',
   name: 'Celo Sepolia',
   symbol: 'CELO',
   explorer: 'https://celo-sepolia.blockscout.com',
@@ -19,13 +19,13 @@ const CELO_SEPOLIA = {
 
 // Token addresses on Celo Sepolia
 const TOKENS = {
-  cUSD: '0xc2FB5a20d07036d828cBbF2FCEE5cea02cc9Cb2f',
-  USDC: '0x360Da2CcFE307B5CB0330d062d8D83B721811B76',
-  USDT: '0xE5eA34847A04d197B22652be1Dc8FbFf11392239',
+  cUSD: '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1',
+  USDC: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B',
+  USDT: '0xE4D517785D091D3c54818832dB6094bcc2744545',
 };
 
 // TriviaBattle contract on Celo Sepolia
-const TRIVIA_CONTRACT = '0xAbB8c5D478F5FA20e4f8bc719B9B09b67Dd03ECd';
+const TRIVIA_CONTRACT = '0xE40DE1f269E2aD112c6faeaA3df4ECAf2E512869';
 
 // ERC20 ABI
 const ERC20_ABI = [
@@ -57,7 +57,7 @@ interface InjectedProvider {
 }
 
 class WalletService {
-  private provider: ethers.JsonRpcProvider | ethers.BrowserProvider;
+  private provider: ethers.JsonRpcProvider | ethers.BrowserProvider | null = null;
   private walletAddress: string | null = null;
   private connectionType: 'walletconnect' | 'manual' | 'none' = 'none';
   private canSign: boolean = false;
@@ -65,11 +65,21 @@ class WalletService {
   private injectedProvider: InjectedProvider | null = null;
 
   constructor() {
-    // Initialize read-only provider by default
-    this.provider = new ethers.JsonRpcProvider(
-      CELO_SEPOLIA.rpcUrl,
-      { chainId: CELO_SEPOLIA.chainId, name: CELO_SEPOLIA.name }
-    );
+    // Provider is lazily initialized when needed
+  }
+
+  /**
+   * Get or create the read-only provider
+   */
+  private getReadOnlyProvider(): ethers.JsonRpcProvider {
+    if (!this.provider || this.provider instanceof ethers.BrowserProvider) {
+      this.provider = new ethers.JsonRpcProvider(
+        CELO_SEPOLIA.rpcUrl,
+        { chainId: CELO_SEPOLIA.chainId, name: CELO_SEPOLIA.name },
+        { staticNetwork: true } // Prevent auto network detection
+      );
+    }
+    return this.provider as ethers.JsonRpcProvider;
   }
 
   /**
@@ -266,13 +276,15 @@ class WalletService {
     }
 
     try {
+      const provider = this.provider || this.getReadOnlyProvider();
+      
       // Get CELO balance
-      const celoBalance = await this.provider.getBalance(this.walletAddress);
+      const celoBalance = await provider.getBalance(this.walletAddress);
       
       // Get token balances
-      const cusdContract = new ethers.Contract(TOKENS.cUSD, ERC20_ABI, this.provider);
-      const usdcContract = new ethers.Contract(TOKENS.USDC, ERC20_ABI, this.provider);
-      const usdtContract = new ethers.Contract(TOKENS.USDT, ERC20_ABI, this.provider);
+      const cusdContract = new ethers.Contract(TOKENS.cUSD, ERC20_ABI, provider);
+      const usdcContract = new ethers.Contract(TOKENS.USDC, ERC20_ABI, provider);
+      const usdtContract = new ethers.Contract(TOKENS.USDT, ERC20_ABI, provider);
 
       const [cusdBalance, usdcBalance, usdtBalance] = await Promise.all([
         cusdContract.balanceOf(this.walletAddress).catch(() => BigInt(0)),
