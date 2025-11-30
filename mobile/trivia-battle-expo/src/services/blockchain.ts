@@ -5,27 +5,20 @@
 
 import { ethers } from 'ethers';
 
-// Deployed TriviaBattleV3 contract
+// Deployed TriviaBattleV3 contract (update after mainnet deployment)
 const CONTRACT_ADDRESS = '0xE40DE1f269E2aD112c6faeaA3df4ECAf2E512869';
 
-// Celo RPC URLs (with fallbacks)
+// Celo Mainnet RPC URLs (with fallbacks)
 const RPC_URLS = [
-  'https://forno.celo.org', // Mainnet
+  'https://forno.celo.org',
   'https://rpc.ankr.com/celo',
   'https://1rpc.io/celo',
 ];
 
-// Use testnet for development (Alfajores is more reliable)
-const TESTNET_RPC_URLS = [
-  'https://alfajores-forno.celo-testnet.org',
-  'https://celo-alfajores-rpc.publicnode.com',
-];
-
-// Set to true for testnet, false for mainnet
-const USE_TESTNET = true;
-const RPC_URL = USE_TESTNET ? TESTNET_RPC_URLS[0] : RPC_URLS[0];
-const CHAIN_ID = USE_TESTNET ? 44787 : 42220;
-const NETWORK_NAME = USE_TESTNET ? 'celo-alfajores' : 'celo';
+// Celo Mainnet configuration
+const RPC_URL = RPC_URLS[0];
+const CHAIN_ID = 42220;
+const NETWORK_NAME = 'celo';
 
 // Complete ABI for TriviaBattleV3 contract
 const CONTRACT_ABI = [
