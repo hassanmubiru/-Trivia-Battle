@@ -3,7 +3,7 @@ const nodeLibsReactNative = require('node-libs-react-native');
 
 const defaultConfig = getDefaultConfig(__dirname);
 
-module.exports = {
+const config = {
   ...defaultConfig,
   resolver: {
     ...defaultConfig.resolver,
@@ -13,6 +13,16 @@ module.exports = {
       'crypto': require.resolve('crypto-browserify'),
       'stream': require.resolve('stream-browserify'),
       'buffer': require.resolve('buffer'),
+    },
+    sourceExts: ['ts', 'tsx', 'js', 'jsx', 'json', 'mjs'],
+    // Handle node: protocol imports
+    resolveRequest: (context, moduleName, platform) => {
+      // Redirect node: protocol imports to actual modules
+      if (moduleName.startsWith('node:')) {
+        const actualModule = moduleName.slice(5);
+        return context.resolveRequest(context, actualModule, platform);
+      }
+      return context.resolveRequest(context, moduleName, platform);
     },
   },
   transformer: {
@@ -25,3 +35,5 @@ module.exports = {
     }),
   },
 };
+
+module.exports = config;
