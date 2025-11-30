@@ -67,7 +67,7 @@ export function getProvider(): ethers.JsonRpcProvider {
   
   const provider = new ethers.JsonRpcProvider(
     fetchReq,
-    USE_TESTNET ? { name: 'celo-alfajores', chainId: 44787 } : { name: 'celo', chainId: 42220 },
+    { name: NETWORK_NAME, chainId: CHAIN_ID },
     { staticNetwork: true } // Skip network detection to avoid errors
   );
   
