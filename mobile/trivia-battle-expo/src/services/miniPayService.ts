@@ -3,26 +3,26 @@
  * Integrates with Celo MiniPay wallet for seamless mobile payments
  * 
  * MiniPay is Opera's crypto wallet built on Celo, accessed via injected provider
- * Configured for Celo Mainnet
+ * Configured for Celo Sepolia testnet
  */
 
 import { ethers } from 'ethers';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Celo Mainnet Configuration
-const CELO_MAINNET = {
-  chainId: 42220,
-  rpcUrl: 'https://forno.celo.org',
-  name: 'Celo',
-  cUSD: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
-  USDC: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C',
-  USDT: '0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e',
+// Celo Sepolia Testnet Configuration
+const CELO_SEPOLIA = {
+  chainId: 44787,
+  rpcUrl: 'https://celo-sepolia.drpc.org',
+  name: 'Celo Sepolia',
+  cUSD: '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1',
+  USDC: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B',
+  USDT: '0xE4D517785D091D3c54818832dB6094bcc2744545',
 };
 
-// Use Celo Mainnet
-const NETWORK = CELO_MAINNET;
+// Use Celo Sepolia Testnet
+const NETWORK = CELO_SEPOLIA;
 
-// TriviaBattle contract on Celo Mainnet (update after deployment)
+// TriviaBattle contract on Celo Sepolia
 const TRIVIA_CONTRACT = '0xE40DE1f269E2aD112c6faeaA3df4ECAf2E512869';
 
 // ERC20 ABI for token interactions

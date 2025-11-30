@@ -5,20 +5,20 @@
 
 import { ethers } from 'ethers';
 
-// Deployed TriviaBattleV3 contract (update after mainnet deployment)
+// Deployed TriviaBattleV3 contract
 const CONTRACT_ADDRESS = '0xE40DE1f269E2aD112c6faeaA3df4ECAf2E512869';
 
-// Celo Mainnet RPC URLs (with fallbacks)
+// Celo Sepolia RPC URLs (with fallbacks)
 const RPC_URLS = [
-  'https://forno.celo.org',
-  'https://rpc.ankr.com/celo',
-  'https://1rpc.io/celo',
+  'https://celo-sepolia.drpc.org',
+  'https://alfajores-forno.celo-testnet.org',
+  'https://celo-alfajores-rpc.publicnode.com',
 ];
 
-// Celo Mainnet configuration
+// Celo Sepolia testnet configuration
 const RPC_URL = RPC_URLS[0];
-const CHAIN_ID = 42220;
-const NETWORK_NAME = 'celo';
+const CHAIN_ID = 44787;
+const NETWORK_NAME = 'celo-sepolia';
 
 // Complete ABI for TriviaBattleV3 contract
 const CONTRACT_ABI = [

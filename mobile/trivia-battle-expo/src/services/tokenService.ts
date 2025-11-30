@@ -21,11 +21,11 @@ export interface TokenBalance {
   formatted: string;
 }
 
-// Token addresses on Celo Mainnet
+// Token addresses on Celo Sepolia Testnet
 export const TOKEN_ADDRESSES: Record<SupportedToken, string> = {
-  cUSD: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
-  USDC: '0xceBA9300f2b948710d2653dD7B07f33A8b32118C',
-  USDT: '0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e',
+  cUSD: '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1',
+  USDC: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B',
+  USDT: '0xE4D517785D091D3c54818832dB6094bcc2744545',
 };
 
 export const TOKEN_DECIMALS: Record<SupportedToken, number> = {
