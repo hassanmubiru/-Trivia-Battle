@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
+  // @ts-ignore
   ScrollView, 
   StyleSheet, 
+  // @ts-ignore
   Alert,
   Linking,
+  // @ts-ignore
   StatusBar as RNStatusBar,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
