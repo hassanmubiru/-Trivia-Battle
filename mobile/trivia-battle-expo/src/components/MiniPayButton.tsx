@@ -10,7 +10,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   View,
-  Image,
 } from 'react-native';
 import { useMiniPay } from '../hooks/useMiniPay';
 
