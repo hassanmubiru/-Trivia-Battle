@@ -79,9 +79,12 @@ export function getContract(): ethers.Contract {
  * Get wallet balance from blockchain
  */
 export async function getWalletBalance(address: string): Promise<number> {
+  if (!address) return 0;
+  
   try {
     const contract = getContract();
     const balance = await contract.getBalance(address);
+    if (balance === undefined || balance === null) return 0;
     // Convert from wei to CELO
     return parseFloat(ethers.formatEther(balance));
   } catch (error) {
@@ -94,9 +97,12 @@ export async function getWalletBalance(address: string): Promise<number> {
  * Get native CELO balance (not contract balance)
  */
 export async function getNativeCeloBalance(address: string): Promise<number> {
+  if (!address) return 0;
+  
   try {
     const provider = getProvider();
     const balance = await provider.getBalance(address);
+    if (balance === undefined || balance === null) return 0;
     return parseFloat(ethers.formatEther(balance));
   } catch (error) {
     console.error('Error fetching native CELO balance:', error);
@@ -240,14 +246,26 @@ export async function getUserStats(address: string): Promise<{
   totalEarnings: number;
   winRate: number;
 }> {
+  // Return defaults if no address provided
+  if (!address) {
+    return {
+      gamesPlayed: 0,
+      wins: 0,
+      losses: 0,
+      totalEarnings: 0,
+      winRate: 0,
+    };
+  }
+  
   try {
     const contract = getContract();
     const stats = await contract.getUserStats(address);
     
-    const gamesPlayed = parseInt(stats.gamesPlayed.toString());
-    const wins = parseInt(stats.wins.toString());
-    const losses = parseInt(stats.losses.toString());
-    const totalEarnings = parseFloat(ethers.formatEther(stats.totalEarnings));
+    // Safely parse values with fallbacks
+    const gamesPlayed = stats?.gamesPlayed ? parseInt(stats.gamesPlayed.toString()) : 0;
+    const wins = stats?.wins ? parseInt(stats.wins.toString()) : 0;
+    const losses = stats?.losses ? parseInt(stats.losses.toString()) : 0;
+    const totalEarnings = stats?.totalEarnings ? parseFloat(ethers.formatEther(stats.totalEarnings)) : 0;
     const winRate = gamesPlayed > 0 ? (wins / gamesPlayed) * 100 : 0;
     
     return {
