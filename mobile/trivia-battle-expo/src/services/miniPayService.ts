@@ -19,16 +19,23 @@ const CELO_MAINNET = {
   USDT: '0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e',
 };
 
+// Celo Sepolia RPC URLs with fallbacks
+const CELO_SEPOLIA_RPC_URLS = [
+  'https://alfajores-forno.celo-testnet.org',
+  'https://celo-alfajores-rpc.publicnode.com',
+  'https://celo-sepolia-rpc.publicnode.com',
+];
+
 const CELO_SEPOLIA = {
-  chainId: 11142220,
-  rpcUrl: 'https://celo-sepolia-rpc.publicnode.com',
-  name: 'Celo Sepolia',
-  cUSD: '0xc2FB5a20d07036d828cBbF2FCEE5cea02cc9Cb2f',
-  USDC: '0x360Da2CcFE307B5CB0330d062d8D83B721811B76',
-  USDT: '0xE5eA34847A04d197B22652be1Dc8FbFf11392239',
+  chainId: 44787, // Celo Alfajores testnet chainId
+  rpcUrl: CELO_SEPOLIA_RPC_URLS[0],
+  name: 'Celo Alfajores',
+  cUSD: '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1',
+  USDC: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B',
+  USDT: '0xE4D517785D091D3c54818832dB6094bcc2744545',
 };
 
-// Use Sepolia testnet for development
+// Use Alfajores testnet for development (more reliable)
 const NETWORK = CELO_SEPOLIA;
 
 // TriviaBattle contract on Celo Sepolia

@@ -15,15 +15,17 @@ const RPC_URLS = [
   'https://1rpc.io/celo',
 ];
 
-// Use testnet for development
+// Use testnet for development (Alfajores is more reliable)
 const TESTNET_RPC_URLS = [
   'https://alfajores-forno.celo-testnet.org',
-  'https://celo-alfajores.infura.io/v3/00000000000000000000000000000000',
+  'https://celo-alfajores-rpc.publicnode.com',
 ];
 
 // Set to true for testnet, false for mainnet
 const USE_TESTNET = true;
 const RPC_URL = USE_TESTNET ? TESTNET_RPC_URLS[0] : RPC_URLS[0];
+const CHAIN_ID = USE_TESTNET ? 44787 : 42220;
+const NETWORK_NAME = USE_TESTNET ? 'celo-alfajores' : 'celo';
 
 // Complete ABI for TriviaBattleV3 contract
 const CONTRACT_ABI = [
