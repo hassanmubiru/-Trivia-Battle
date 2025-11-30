@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+// @ts-ignore - Alert type issue in some RN versions
 import { Alert } from 'react-native';
 import { miniPayService, WalletState, TransactionResult } from '../services/miniPayService';
 
