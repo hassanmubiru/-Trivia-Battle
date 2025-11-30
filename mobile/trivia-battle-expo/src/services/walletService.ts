@@ -228,7 +228,7 @@ class WalletService {
       const type = (await AsyncStorage.getItem('connectionType')) as 'walletconnect' | 'manual' | null;
       const hasRealSigner = await AsyncStorage.getItem('hasRealSigner');
 
-      if (address && ethers.isAddress(address)) {
+      if (address && typeof address === 'string' && ethers.isAddress(address)) {
         this.walletAddress = address;
         this.connectionType = type || 'manual';
         
@@ -236,10 +236,12 @@ class WalletService {
         if (hasRealSigner === 'true' && this.hasInjectedProvider()) {
           try {
             const injected = (window as any).ethereum as InjectedProvider;
-            this.provider = new ethers.BrowserProvider(injected);
-            this.signer = await this.provider.getSigner();
-            this.canSign = true;
-            this.injectedProvider = injected;
+            if (injected) {
+              this.provider = new ethers.BrowserProvider(injected);
+              this.signer = await this.provider.getSigner();
+              this.canSign = true;
+              this.injectedProvider = injected;
+            }
           } catch (error) {
             console.warn('Could not restore provider connection:', error);
             this.canSign = false;
@@ -263,6 +265,7 @@ class WalletService {
       return null;
     } catch (error) {
       // Expected if no previous connection exists
+      console.warn('Error restoring connection:', error);
       return null;
     }
   }
@@ -276,27 +279,50 @@ class WalletService {
     }
 
     try {
-      const provider = this.provider || this.getReadOnlyProvider();
+      const provider = this.getReadOnlyProvider();
+      if (!provider) {
+        return { CELO: '0', cUSD: '0', USDC: '0', USDT: '0' };
+      }
       
       // Get CELO balance
-      const celoBalance = await provider.getBalance(this.walletAddress);
+      let celoBalance = BigInt(0);
+      try {
+        celoBalance = await provider.getBalance(this.walletAddress);
+      } catch (e) {
+        console.warn('Error getting CELO balance:', e);
+      }
       
-      // Get token balances
-      const cusdContract = new ethers.Contract(TOKENS.cUSD, ERC20_ABI, provider);
-      const usdcContract = new ethers.Contract(TOKENS.USDC, ERC20_ABI, provider);
-      const usdtContract = new ethers.Contract(TOKENS.USDT, ERC20_ABI, provider);
-
-      const [cusdBalance, usdcBalance, usdtBalance] = await Promise.all([
-        cusdContract.balanceOf(this.walletAddress).catch(() => BigInt(0)),
-        usdcContract.balanceOf(this.walletAddress).catch(() => BigInt(0)),
-        usdtContract.balanceOf(this.walletAddress).catch(() => BigInt(0)),
-      ]);
+      // Get token balances with individual error handling
+      let cusdBalance = BigInt(0);
+      let usdcBalance = BigInt(0);
+      let usdtBalance = BigInt(0);
+      
+      try {
+        const cusdContract = new ethers.Contract(TOKENS.cUSD, ERC20_ABI, provider);
+        cusdBalance = await cusdContract.balanceOf(this.walletAddress);
+      } catch (e) {
+        console.warn('Error getting cUSD balance:', e);
+      }
+      
+      try {
+        const usdcContract = new ethers.Contract(TOKENS.USDC, ERC20_ABI, provider);
+        usdcBalance = await usdcContract.balanceOf(this.walletAddress);
+      } catch (e) {
+        console.warn('Error getting USDC balance:', e);
+      }
+      
+      try {
+        const usdtContract = new ethers.Contract(TOKENS.USDT, ERC20_ABI, provider);
+        usdtBalance = await usdtContract.balanceOf(this.walletAddress);
+      } catch (e) {
+        console.warn('Error getting USDT balance:', e);
+      }
 
       return {
-        CELO: ethers.formatEther(celoBalance),
-        cUSD: ethers.formatUnits(cusdBalance, 18),
-        USDC: ethers.formatUnits(usdcBalance, 6),
-        USDT: ethers.formatUnits(usdtBalance, 6),
+        CELO: ethers.formatEther(celoBalance || BigInt(0)),
+        cUSD: ethers.formatUnits(cusdBalance || BigInt(0), 18),
+        USDC: ethers.formatUnits(usdcBalance || BigInt(0), 6),
+        USDT: ethers.formatUnits(usdtBalance || BigInt(0), 6),
       };
     } catch (error) {
       console.warn('Error fetching balances:', error);
