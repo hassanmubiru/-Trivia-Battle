@@ -54,17 +54,20 @@ const CONTRACT_ABI = [
  * Creates a new provider instance with proper network configuration
  */
 export function getProvider(): ethers.JsonRpcProvider {
-  // Create FetchRequest for React Native compatibility
-  const fetchReq = new ethers.FetchRequest(RPC_URL);
-  fetchReq.timeout = 30000; // 30 second timeout
-  
-  const provider = new ethers.JsonRpcProvider(
-    fetchReq,
-    { name: NETWORK_NAME, chainId: CHAIN_ID },
-    { staticNetwork: true } // Skip network detection to avoid errors
-  );
-  
-  return provider;
+  try {
+    // Simple provider creation without FetchRequest for better compatibility
+    const provider = new ethers.JsonRpcProvider(
+      RPC_URL,
+      { name: NETWORK_NAME, chainId: CHAIN_ID },
+      { staticNetwork: true } // Skip network detection to avoid errors
+    );
+    
+    return provider;
+  } catch (error) {
+    console.error('Error creating provider:', error);
+    // Return a fallback provider
+    return new ethers.JsonRpcProvider(RPC_URL);
+  }
 }
 
 /**
