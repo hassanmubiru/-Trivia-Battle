@@ -4,6 +4,13 @@ import 'react-native-get-random-values';
 import 'react-native-url-polyfill/auto';
 import '@ethersproject/shims';
 
+// Crypto polyfill for MetaMask SDK
+try {
+  require('crypto');
+} catch (e) {
+  // Crypto polyfill already loaded
+}
+
 import { registerRootComponent } from 'expo';
 
 import App from './App';
