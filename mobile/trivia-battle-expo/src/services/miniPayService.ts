@@ -10,6 +10,7 @@
 
 import { ethers } from 'ethers';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// @ts-ignore - React Native types
 import { Linking, Platform } from 'react-native';
 
 // Celo Mainnet Configuration (Production - where MiniPay operates)
