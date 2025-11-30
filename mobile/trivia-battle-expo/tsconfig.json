@@ -9,7 +9,7 @@
     "noEmit": true,
     "isolatedModules": true,
     "types": ["react", "react-native"],
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "lib": ["es2020", "dom", "dom.iterable"]
   },
