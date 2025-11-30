@@ -21,18 +21,11 @@ export interface TokenBalance {
   formatted: string;
 }
 
-// Token addresses on Celo (mainnet)
+// Token addresses on Celo Mainnet
 export const TOKEN_ADDRESSES: Record<SupportedToken, string> = {
   cUSD: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
   USDC: '0xceBA9300f2b948710d2653dD7B07f33A8b32118C',
   USDT: '0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e',
-};
-
-// Token addresses on Alfajores (testnet)
-export const TOKEN_ADDRESSES_TESTNET: Record<SupportedToken, string> = {
-  cUSD: '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1',
-  USDC: '0x41F5b3C4c6FcC5b5D4b5C5b5C5b5C5b5C5b5C5b5C',
-  USDT: '0x41F5b3C4c6FcC5b5D4b5C5b5C5b5C5b5C5b5C5b5C',
 };
 
 export const TOKEN_DECIMALS: Record<SupportedToken, number> = {
@@ -42,22 +35,11 @@ export const TOKEN_DECIMALS: Record<SupportedToken, number> = {
 };
 
 class TokenService {
-  private network: 'alfajores' | 'celo' = 'alfajores';
-
   /**
-   * Set network
-   */
-  setNetwork(network: 'alfajores' | 'celo'): void {
-    this.network = network;
-  }
-
-  /**
-   * Get token address for current network
+   * Get token address
    */
   getTokenAddress(token: SupportedToken): string {
-    const addresses =
-      this.network === 'alfajores' ? TOKEN_ADDRESSES_TESTNET : TOKEN_ADDRESSES;
-    return addresses[token];
+    return TOKEN_ADDRESSES[token];
   }
 
   /**

@@ -3,13 +3,13 @@
  * Integrates with Celo MiniPay wallet for seamless mobile payments
  * 
  * MiniPay is Opera's crypto wallet built on Celo, accessed via injected provider
- * Configured for Celo Sepolia testnet
+ * Configured for Celo Mainnet
  */
 
 import { ethers } from 'ethers';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Contract addresses on Celo Mainnet
+// Celo Mainnet Configuration
 const CELO_MAINNET = {
   chainId: 42220,
   rpcUrl: 'https://forno.celo.org',
@@ -19,27 +19,11 @@ const CELO_MAINNET = {
   USDT: '0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e',
 };
 
-// Celo Sepolia RPC URLs with fallbacks
-const CELO_SEPOLIA_RPC_URLS = [
-  'https://alfajores-forno.celo-testnet.org',
-  'https://celo-alfajores-rpc.publicnode.com',
-  'https://celo-sepolia-rpc.publicnode.com',
-];
+// Use Celo Mainnet
+const NETWORK = CELO_MAINNET;
 
-const CELO_SEPOLIA = {
-  chainId: 44787, // Celo Alfajores testnet chainId
-  rpcUrl: CELO_SEPOLIA_RPC_URLS[0],
-  name: 'Celo Alfajores',
-  cUSD: '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1',
-  USDC: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B',
-  USDT: '0xE4D517785D091D3c54818832dB6094bcc2744545',
-};
-
-// Use Alfajores testnet for development (more reliable)
-const NETWORK = CELO_SEPOLIA;
-
-// TriviaBattle contract on Celo Sepolia
-const TRIVIA_CONTRACT = '0xAbB8c5D478F5FA20e4f8bc719B9B09b67Dd03ECd';
+// TriviaBattle contract on Celo Mainnet (update after deployment)
+const TRIVIA_CONTRACT = '0xE40DE1f269E2aD112c6faeaA3df4ECAf2E512869';
 
 // ERC20 ABI for token interactions
 const ERC20_ABI = [
