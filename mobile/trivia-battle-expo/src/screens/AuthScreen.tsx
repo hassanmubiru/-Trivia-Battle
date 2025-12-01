@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -10,18 +10,25 @@ import {
   Linking,
   // @ts-ignore
   StatusBar as RNStatusBar,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useMiniPay } from '../hooks/useMiniPay';
+import { useWalletConnect } from '../hooks/useWalletConnect';
 import { useMetaMaskSDK } from '../hooks/useMetaMaskSDK';
 import { Button, Card, Input } from '../components';
 import { Colors, Typography, Spacing, BorderRadius } from '../constants/theme';
 
+const WALLETCONNECT_PROJECT_ID = 'e542ff314e26ff34de2d4fba98db70bb'; // Replace with your project ID
+
 export default function AuthScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [manualAddress, setManualAddress] = useState('');
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const walletConnect = useWalletConnect(WALLETCONNECT_PROJECT_ID);
   const metaMask = useMetaMaskSDK();
-  const miniPay = useMiniPay();
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
     // Check if already authenticated
@@ -57,18 +64,19 @@ export default function AuthScreen({ navigation }: any) {
     handleWalletConnect();
   }, [metaMask.isConnected, metaMask.address]);
 
-  // Auto-navigate when MiniPay connects
+  // Auto-navigate when WalletConnect connects
   useEffect(() => {
-    const handleMiniPayConnect = async () => {
-      if (miniPay.isConnected && miniPay.address) {
+    const handleWalletConnectConnect = async () => {
+      if (walletConnect.isConnected && walletConnect.address) {
         try {
-          await AsyncStorage.setItem('walletAddress', miniPay.address);
-          await AsyncStorage.setItem('walletType', miniPay.isMiniPay ? 'minipay' : 'injected');
+          await AsyncStorage.setItem('walletAddress', walletConnect.address);
+          await AsyncStorage.setItem('walletType', 'walletconnect');
           await AsyncStorage.setItem('isAuthenticated', 'true');
           
           Alert.alert(
-            miniPay.isMiniPay ? '✓ MiniPay Connected!' : '✓ Wallet Connected!',
-            `CELO: ${parseFloat(miniPay.balances.CELO).toFixed(4)}\ncUSD: ${parseFloat(miniPay.balances.cUSD).toFixed(2)}`,
+            '✓ Wallet Connected!',
+            `Address: ${walletConnect.address.slice(0, 6)}...${walletConnect.address.slice(-4)}\n\n` +
+            `Now you can use MiniPay, MetaMask Mobile, or any WalletConnect wallet!`,
             [{ text: 'Continue', onPress: () => navigation.replace('Main') }]
           );
         } catch (error) {
@@ -77,8 +85,8 @@ export default function AuthScreen({ navigation }: any) {
       }
     };
     
-    handleMiniPayConnect();
-  }, [miniPay.isConnected, miniPay.address]);
+    handleWalletConnectConnect();
+  }, [walletConnect.isConnected, walletConnect.address]);
 
   const handlePhoneLogin = async () => {
     if (phoneNumber.length < 10) {
@@ -108,32 +116,44 @@ export default function AuthScreen({ navigation }: any) {
     }
   };
 
-  const handleMiniPayConnect = async () => {
+  const handleWalletConnectConnect = async () => {
     try {
-      // Check if running in MiniPay or has injected provider
-      if (miniPay.isMiniPayEnvironment) {
-        // Direct MiniPay connection
-        await miniPay.connect();
-      } else if (miniPay.canSign || typeof window !== 'undefined' && (window as any).ethereum) {
-        // Has some web3 provider, try to connect
-        await miniPay.connect();
-      } else {
-        // No provider available, offer options
+      await walletConnect.connect();
+      // Success alert and navigation handled by useEffect
+    } catch (error: any) {
+      console.error('WalletConnect error:', error);
+      if (error.message && !error.message.includes('User rejected')) {
         Alert.alert(
-          'Wallet Required',
-          'To play with real crypto, you need a Web3 wallet.\n\n' +
-          '📱 MiniPay - Best for Celo (Android, Africa)\n' +
-          '🦊 MetaMask - Universal Web3 wallet',
-          [
-            { text: 'Open MiniPay', onPress: () => miniPay.openMiniPay() },
-            { text: 'Use MetaMask', onPress: handleMetaMaskConnect },
-            { text: 'Cancel', style: 'cancel' },
-          ]
+          'Connection Failed',
+          error.message || 'Failed to connect wallet',
+          [{ text: 'OK' }]
         );
       }
-    } catch (error: any) {
-      console.error('MiniPay error:', error);
-      // Error handling is done in the hook
+    }
+  };
+
+  const handleManualAddressConnect = async () => {
+    const address = manualAddress.trim();
+    
+    // Validate address format
+    if (!address.startsWith('0x') || address.length !== 42) {
+      Alert.alert('Invalid Address', 'Please enter a valid Ethereum/Celo address (0x...)');
+      return;
+    }
+    
+    try {
+      await AsyncStorage.setItem('walletAddress', address);
+      await AsyncStorage.setItem('walletType', 'manual');
+      await AsyncStorage.setItem('isAuthenticated', 'true');
+      
+      Alert.alert(
+        '✓ Address Connected!',
+        `Wallet: ${address.slice(0, 6)}...${address.slice(-4)}\n\nNote: Read-only mode. Cannot sign transactions.`,
+        [{ text: 'Continue', onPress: () => navigation.replace('Main') }]
+      );
+    } catch (error) {
+      console.error('Error saving wallet:', error);
+      Alert.alert('Error', 'Failed to save wallet address');
     }
   };
 
@@ -176,34 +196,28 @@ export default function AuthScreen({ navigation }: any) {
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Secondary: MiniPay */}
+          {/* Secondary: WalletConnect (MiniPay, MetaMask Mobile, etc.) */}
           <Button
-            title={miniPay.isConnecting ? '⏳ Connecting...' : miniPay.isMiniPayEnvironment ? '📱 Connect with MiniPay' : '📱 Connect Wallet (Celo)'}
-            onPress={handleMiniPayConnect}
-            disabled={miniPay.isConnecting}
-            loading={miniPay.isConnecting}
+            title={walletConnect.isConnecting ? '⏳ Connecting...' : '📱 Connect Mobile Wallet'}
+            onPress={handleWalletConnectConnect}
+            disabled={walletConnect.isConnecting || !walletConnect.isInitialized}
+            loading={walletConnect.isConnecting}
             variant="secondary"
             size="lg"
             fullWidth
           />
 
-          {miniPay.isMiniPayEnvironment && (
-            <View style={styles.miniPayBadge}>
-              <Text style={styles.miniPayBadgeText}>✓ MiniPay Detected</Text>
-            </View>
-          )}
-
           {/* Info */}
           <View style={styles.infoBox}>
             <Text style={styles.infoTitle}>💡 Wallet Options:</Text>
             <Text style={styles.infoText}>
-              • <Text style={styles.bold}>MetaMask</Text> - Direct SDK connection
+              • <Text style={styles.bold}>Mobile Wallet</Text> - MiniPay, MetaMask Mobile, etc.
             </Text>
             <Text style={styles.infoText}>
-              • <Text style={styles.bold}>MiniPay</Text> - Celo native wallet (Africa)
+              • <Text style={styles.bold}>MetaMask SDK</Text> - Direct connection (above)
             </Text>
             <Text style={styles.infoText}>
-              • <Text style={styles.bold}>Any Web3</Text> - Browser injected wallet
+              • <Text style={styles.bold}>Manual Entry</Text> - Read-only wallet address
             </Text>
           </View>
         </View>
