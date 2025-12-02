@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -7,20 +7,14 @@ import {
   StyleSheet, 
   // @ts-ignore
   Alert,
-  Linking,
-  // @ts-ignore
-  StatusBar as RNStatusBar,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMetaMaskSDK } from '../hooks/useMetaMaskSDK';
-import { Button, Card, Input } from '../components';
+import { Button, Card } from '../components';
 import { Colors, Typography, Spacing, BorderRadius } from '../constants/theme';
 
 export default function AuthScreen({ navigation }: any) {
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [manualAddress, setManualAddress] = useState('');
-  const [showManualEntry, setShowManualEntry] = useState(false);
   const metaMask = useMetaMaskSDK();
 
   useEffect(() => {
@@ -57,21 +51,6 @@ export default function AuthScreen({ navigation }: any) {
     handleWalletConnect();
   }, [metaMask.isConnected, metaMask.address]);
 
-  const handlePhoneLogin = async () => {
-    if (phoneNumber.length < 10) {
-      Alert.alert('Error', 'Please enter a valid phone number');
-      return;
-    }
-    
-    try {
-      await AsyncStorage.setItem('userPhone', phoneNumber);
-      await AsyncStorage.setItem('isAuthenticated', 'true');
-      navigation.replace('Main');
-    } catch (error: any) {
-      Alert.alert('Error', 'Failed to login');
-    }
-  };
-
   const handleMetaMaskConnect = async () => {
     try {
       await metaMask.connect();
@@ -82,31 +61,6 @@ export default function AuthScreen({ navigation }: any) {
         error.message || 'Failed to connect to MetaMask',
         [{ text: 'OK' }]
       );
-    }
-  };
-
-  const handleManualAddressConnect = async () => {
-    const address = manualAddress.trim();
-    
-    // Validate address format
-    if (!address.startsWith('0x') || address.length !== 42) {
-      Alert.alert('Invalid Address', 'Please enter a valid Ethereum/Celo address (0x...)');
-      return;
-    }
-    
-    try {
-      await AsyncStorage.setItem('walletAddress', address);
-      await AsyncStorage.setItem('walletType', 'manual');
-      await AsyncStorage.setItem('isAuthenticated', 'true');
-      
-      Alert.alert(
-        '✓ Address Connected!',
-        `Wallet: ${address.slice(0, 6)}...${address.slice(-4)}\n\nNote: Read-only mode. Cannot sign transactions.`,
-        [{ text: 'Continue', onPress: () => navigation.replace('Main') }]
-      );
-    } catch (error) {
-      console.error('Error saving wallet:', error);
-      Alert.alert('Error', 'Failed to save wallet address');
     }
   };
 
@@ -125,8 +79,11 @@ export default function AuthScreen({ navigation }: any) {
       <Card style={styles.card} variant="elevated">
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Connect Your Wallet</Text>
+          <Text style={styles.sectionDescription}>
+            Connect MetaMask to play trivia and earn rewards on Celo
+          </Text>
           
-          {/* Primary: Direct MetaMask */}
+          {/* MetaMask Connection */}
           <Button
             title={metaMask.isConnecting ? '⏳ Connecting...' : '🦊 Connect MetaMask'}
             onPress={handleMetaMaskConnect}
@@ -143,83 +100,19 @@ export default function AuthScreen({ navigation }: any) {
             </View>
           )}
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Manual Wallet Address Entry */}
-          <View style={styles.section}>
-            <Text style={styles.sectionSubtitle}>📝 Manual Wallet Connection</Text>
-            <Text style={styles.sectionDescription}>
-              For MiniPay, Valora, or other Celo wallets - enter your address
-            </Text>
-            
-            <Input
-              label="Wallet Address"
-              placeholder="0x..."
-              value={manualAddress}
-              onChangeText={setManualAddress}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            
-            <Button
-              title="Connect Address"
-              onPress={handleManualAddressConnect}
-              disabled={!manualAddress.trim()}
-              variant="secondary"
-              size="lg"
-              fullWidth
-            />
-          </View>
-
           {/* Info */}
           <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>💡 Connection Methods:</Text>
+            <Text style={styles.infoTitle}>💡 How it works:</Text>
             <Text style={styles.infoText}>
-              • <Text style={styles.bold}>MetaMask SDK</Text> - Full transaction signing
+              1. Tap "Connect MetaMask" above
             </Text>
             <Text style={styles.infoText}>
-              • <Text style={styles.bold}>Manual Entry</Text> - Read-only mode (copy address from MiniPay/Valora)
+              2. Approve the connection in MetaMask app
             </Text>
             <Text style={styles.infoText}>
-              • <Text style={styles.bold}>Phone Demo</Text> - Try without wallet
+              3. Return to this app and start playing!
             </Text>
           </View>
-        </View>
-
-        {/* Demo Mode */}
-        <View style={[styles.divider, { marginVertical: Spacing.xl }]}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>OR</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Demo Mode</Text>
-          <Text style={styles.sectionDescription}>
-            Try the app without a wallet
-          </Text>
-          
-          <Input
-            label="Phone Number"
-            placeholder="+256 XXX XXX XXX"
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-            keyboardType="phone-pad"
-          />
-          
-          <Button
-            title="📱 Login with Phone"
-            onPress={handlePhoneLogin}
-            disabled={false}
-            loading={false}
-            variant="ghost"
-            size="lg"
-            fullWidth
-          />
         </View>
       </Card>
 
