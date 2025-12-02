@@ -3,31 +3,14 @@ import { ethers } from 'ethers';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Linking, Alert } from 'react-native';
 
-// Platform detection
-const isReactNative = () => {
-  return typeof navigator !== 'undefined' && !!navigator.product;
-};
+// WalletConnect Project ID - Get from https://cloud.walletconnect.com
+const PROJECT_ID = 'e542ff314e26ff34de2d4fba98db70bb';
 
-// MetaMask deep link helper
-const openMetaMaskDeepLink = (uri: string) => {
-  // WalletConnect v2 format: wc:projectId@version?bridge=...&key=...
-  // Convert to MetaMask deep link: metamask://wc?uri=encoded_uri
-  try {
-    const encodedUri = encodeURIComponent(uri);
-    const deepLink = `metamask://wc?uri=${encodedUri}`;
-    
-    console.log('[WalletConnect] Opening MetaMask with deep link...');
-    Linking.openURL(deepLink).catch((error) => {
-      console.error('[WalletConnect] Failed to open MetaMask:', error);
-      throw new Error(
-        'MetaMask is not installed. Please install MetaMask Mobile from your app store.'
-      );
-    });
-  } catch (error) {
-    console.error('[WalletConnect] Deep link error:', error);
-    throw error;
-  }
-};
+// Celo Sepolia Testnet
+const CELO_SEPOLIA_CHAIN_ID = 44787;
+
+// MiniPay deep link
+const MINIPAY_DEEPLINK = 'minipay://';
 
 export interface WalletInfo {
   address: string;
@@ -43,7 +26,7 @@ export class WalletConnectService {
   private chains: number[];
   private listeners: Map<string, Function[]> = new Map();
 
-  constructor(projectId: string, chains: number[] = [11142220]) {
+  constructor(projectId: string = PROJECT_ID, chains: number[] = [CELO_SEPOLIA_CHAIN_ID]) {
     if (!projectId) {
       throw new Error(
         'WalletConnect projectId is required. Get it from https://cloud.walletconnect.com'
@@ -58,7 +41,7 @@ export class WalletConnectService {
    */
   async initialize(): Promise<void> {
     try {
-      console.log('[WalletConnect] Initializing with project ID...');
+      console.log('[WalletConnect] Initializing...');
       
       // Configure for React Native environment
       const providerConfig: any = {
@@ -68,34 +51,23 @@ export class WalletConnectService {
           'eth_sendTransaction',
           'eth_signMessage',
           'personal_sign',
-          'eth_sign',
-          'eth_signTypedData',
           'eth_accounts',
-          'eth_chainId',
-          'eth_gasPrice',
-          'eth_getBalance',
-          'eth_getCode',
-          'eth_getTransactionByHash',
-          'eth_getTransactionReceipt',
-          'eth_estimateGas',
-          'eth_call',
         ],
-        events: ['chainChanged', 'accountsChanged', 'session_update'],
-        showQrModal: false, // Disable browser QR modal for React Native
+        events: ['chainChanged', 'accountsChanged'],
+        showQrModal: false, // We'll handle deep linking manually
         rpcMap: {
-          11142220: 'https://celo-sepolia-rpc.publicnode.com',
+          [CELO_SEPOLIA_CHAIN_ID]: 'https://celo-sepolia.drpc.org',
         },
         metadata: {
           name: 'Trivia Battle',
           description: 'Play trivia and earn rewards on Celo',
-          url: 'https://triviabattle.com',
-          icons: [],
+          url: 'https://triviabattle.io',
+          icons: ['https://triviabattle.io/icon.png'],
         },
       };
 
       // Initialize the provider
       this.provider = await EthereumProvider.init(providerConfig);
-
       this.setupEventListeners();
       
       // Try to restore previous session
@@ -109,27 +81,43 @@ export class WalletConnectService {
   }
 
   /**
-   * Connect to wallet via deep link to MetaMask app
+   * Connect to MiniPay or other wallet via deep link
    */
-  async connect(): Promise<WalletInfo> {
+  async connect(walletType: 'minipay' | 'metamask' = 'minipay'): Promise<WalletInfo> {
     if (!this.provider) {
       throw new Error('WalletConnect not initialized. Call initialize() first.');
     }
 
     try {
-      console.log('[WalletConnect] Initiating connection...');
+      console.log(`[WalletConnect] Connecting to ${walletType}...`);
       
-      // Get the connection URI
-      const uri = await this.provider.connect();
-      console.log('[WalletConnect] Connection URI generated');
+      // Enable the provider and get URI
+      const { uri } = await this.provider.connect();
+      
+      if (uri) {
+        console.log('[WalletConnect] Connection URI generated');
+        
+        // Open appropriate wallet app
+        const deepLink = walletType === 'minipay' 
+          ? `${MINIPAY_DEEPLINK}wc?uri=${encodeURIComponent(uri)}`
+          : `metamask://wc?uri=${encodeURIComponent(uri)}`;
+        
+        const canOpen = await Linking.canOpenURL(deepLink);
+        if (canOpen) {
+          await Linking.openURL(deepLink);
+        } else {
+          // Fallback - try universal link
+          if (walletType === 'minipay') {
+            throw new Error('MiniPay is not installed. Please install MiniPay from the Play Store.');
+          } else {
+            throw new Error('MetaMask Mobile is not installed. Please install it from your app store.');
+          }
+        }
+      }
 
-      // Open MetaMask app directly with deep link
-      // This will switch to MetaMask and show approval dialog
-      openMetaMaskDeepLink(uri);
-
-      // Wait for wallet response (this happens when user approves in MetaMask)
+      // Wait for connection
       const accounts = (await this.provider.request({
-        method: 'eth_requestAccounts',
+        method: 'eth_accounts',
       })) as string[];
 
       if (!accounts || accounts.length === 0) {
@@ -144,10 +132,15 @@ export class WalletConnectService {
 
       // Get current chain
       const network = await ethersProvider.getNetwork();
+      const chainId = Number(network.chainId);
+
+      // Save session
+      await AsyncStorage.setItem('wc_address', this.address);
+      await AsyncStorage.setItem('wc_chainId', String(chainId));
 
       const walletInfo: WalletInfo = {
         address: this.address,
-        chainId: Number(network.chainId),
+        chainId,
         isConnected: true,
       };
 

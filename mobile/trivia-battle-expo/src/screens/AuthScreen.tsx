@@ -11,11 +11,15 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMetaMaskSDK } from '../hooks/useMetaMaskSDK';
+import { useWalletConnect } from '../hooks/useWalletConnect';
 import { Button, Card } from '../components';
 import { Colors, Typography, Spacing, BorderRadius } from '../constants/theme';
 
+const WALLETCONNECT_PROJECT_ID = 'e542ff314e26ff34de2d4fba98db70bb';
+
 export default function AuthScreen({ navigation }: any) {
   const metaMask = useMetaMaskSDK();
+  const walletConnect = useWalletConnect(WALLETCONNECT_PROJECT_ID);
 
   useEffect(() => {
     // Check if already authenticated
@@ -51,6 +55,29 @@ export default function AuthScreen({ navigation }: any) {
     handleWalletConnect();
   }, [metaMask.isConnected, metaMask.address]);
 
+  // Auto-navigate when WalletConnect connects
+  useEffect(() => {
+    const handleWCConnect = async () => {
+      if (walletConnect.isConnected && walletConnect.address) {
+        try {
+          await AsyncStorage.setItem('walletAddress', walletConnect.address);
+          await AsyncStorage.setItem('walletType', 'walletconnect');
+          await AsyncStorage.setItem('isAuthenticated', 'true');
+          
+          Alert.alert(
+            '✓ Wallet Connected!',
+            `Address: ${walletConnect.address.slice(0, 6)}...${walletConnect.address.slice(-4)}`,
+            [{ text: 'Continue', onPress: () => navigation.replace('Main') }]
+          );
+        } catch (error) {
+          console.error('Error saving wallet:', error);
+        }
+      }
+    };
+    
+    handleWCConnect();
+  }, [walletConnect.isConnected, walletConnect.address]);
+
   const handleMetaMaskConnect = async () => {
     try {
       await metaMask.connect();
@@ -61,6 +88,21 @@ export default function AuthScreen({ navigation }: any) {
         error.message || 'Failed to connect to MetaMask',
         [{ text: 'OK' }]
       );
+    }
+  };
+
+  const handleMiniPayConnect = async () => {
+    try {
+      await walletConnect.connect();
+    } catch (error: any) {
+      console.error('MiniPay connection error:', error);
+      if (!error.message?.includes('User rejected')) {
+        Alert.alert(
+          'Connection Failed',
+          error.message || 'Failed to connect to MiniPay',
+          [{ text: 'OK' }]
+        );
+      }
     }
   };
 
@@ -80,23 +122,42 @@ export default function AuthScreen({ navigation }: any) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Connect Your Wallet</Text>
           <Text style={styles.sectionDescription}>
-            Connect MetaMask to play trivia and earn rewards on Celo
+            Choose your preferred wallet to get started
           </Text>
           
+          {/* MiniPay Connection */}
+          <Button
+            title={walletConnect.isConnecting ? '⏳ Connecting...' : '📱 Connect MiniPay'}
+            onPress={handleMiniPayConnect}
+            disabled={walletConnect.isConnecting}
+            loading={walletConnect.isConnecting}
+            variant="primary"
+            size="lg"
+            fullWidth
+          />
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
           {/* MetaMask Connection */}
           <Button
             title={metaMask.isConnecting ? '⏳ Connecting...' : '🦊 Connect MetaMask'}
             onPress={handleMetaMaskConnect}
             disabled={metaMask.isConnecting}
             loading={metaMask.isConnecting}
-            variant="primary"
+            variant="secondary"
             size="lg"
             fullWidth
           />
 
-          {metaMask.error && (
+          {(metaMask.error || walletConnect.error) && (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>⚠️ {metaMask.error.message}</Text>
+              <Text style={styles.errorText}>
+                ⚠️ {metaMask.error?.message || walletConnect.error?.message}
+              </Text>
             </View>
           )}
 
@@ -104,13 +165,19 @@ export default function AuthScreen({ navigation }: any) {
           <View style={styles.infoBox}>
             <Text style={styles.infoTitle}>💡 How it works:</Text>
             <Text style={styles.infoText}>
-              1. Tap "Connect MetaMask" above
+              1. Tap your wallet (MiniPay or MetaMask)
             </Text>
             <Text style={styles.infoText}>
-              2. Approve the connection in MetaMask app
+              2. Approve the connection in the wallet app
             </Text>
             <Text style={styles.infoText}>
-              3. Return to this app and start playing!
+              3. Return here and start playing!
+            </Text>
+            <Text style={[styles.infoText, { marginTop: Spacing.sm }]}>
+              <Text style={styles.bold}>MiniPay:</Text> Celo's mobile wallet (Africa)
+            </Text>
+            <Text style={styles.infoText}>
+              <Text style={styles.bold}>MetaMask:</Text> Universal Web3 wallet
             </Text>
           </View>
         </View>

@@ -71,11 +71,11 @@ export function useWalletConnect(projectId: string): UseWalletConnectState {
     };
   }, []);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (walletType: 'minipay' | 'metamask' = 'minipay') => {
     try {
       setIsConnecting(true);
       setError(null);
-      const walletInfo = await service.connect();
+      const walletInfo = await service.connect(walletType);
       setAddress(walletInfo.address);
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Connection failed');
