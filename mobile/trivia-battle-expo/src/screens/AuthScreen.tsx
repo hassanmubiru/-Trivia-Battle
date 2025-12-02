@@ -10,25 +10,18 @@ import {
   Linking,
   // @ts-ignore
   StatusBar as RNStatusBar,
-  AppState,
-  AppStateStatus,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useWalletConnect } from '../hooks/useWalletConnect';
 import { useMetaMaskSDK } from '../hooks/useMetaMaskSDK';
 import { Button, Card, Input } from '../components';
 import { Colors, Typography, Spacing, BorderRadius } from '../constants/theme';
-
-const WALLETCONNECT_PROJECT_ID = 'e542ff314e26ff34de2d4fba98db70bb'; // Replace with your project ID
 
 export default function AuthScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [manualAddress, setManualAddress] = useState('');
   const [showManualEntry, setShowManualEntry] = useState(false);
-  const walletConnect = useWalletConnect(WALLETCONNECT_PROJECT_ID);
   const metaMask = useMetaMaskSDK();
-  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
     // Check if already authenticated
@@ -64,30 +57,6 @@ export default function AuthScreen({ navigation }: any) {
     handleWalletConnect();
   }, [metaMask.isConnected, metaMask.address]);
 
-  // Auto-navigate when WalletConnect connects
-  useEffect(() => {
-    const handleWalletConnectConnect = async () => {
-      if (walletConnect.isConnected && walletConnect.address) {
-        try {
-          await AsyncStorage.setItem('walletAddress', walletConnect.address);
-          await AsyncStorage.setItem('walletType', 'walletconnect');
-          await AsyncStorage.setItem('isAuthenticated', 'true');
-          
-          Alert.alert(
-            '✓ Wallet Connected!',
-            `Address: ${walletConnect.address.slice(0, 6)}...${walletConnect.address.slice(-4)}\n\n` +
-            `Now you can use MiniPay, MetaMask Mobile, or any WalletConnect wallet!`,
-            [{ text: 'Continue', onPress: () => navigation.replace('Main') }]
-          );
-        } catch (error) {
-          console.error('Error saving wallet:', error);
-        }
-      }
-    };
-    
-    handleWalletConnectConnect();
-  }, [walletConnect.isConnected, walletConnect.address]);
-
   const handlePhoneLogin = async () => {
     if (phoneNumber.length < 10) {
       Alert.alert('Error', 'Please enter a valid phone number');
@@ -113,22 +82,6 @@ export default function AuthScreen({ navigation }: any) {
         error.message || 'Failed to connect to MetaMask',
         [{ text: 'OK' }]
       );
-    }
-  };
-
-  const handleWalletConnectConnect = async () => {
-    try {
-      await walletConnect.connect();
-      // Success alert and navigation handled by useEffect
-    } catch (error: any) {
-      console.error('WalletConnect error:', error);
-      if (error.message && !error.message.includes('User rejected')) {
-        Alert.alert(
-          'Connection Failed',
-          error.message || 'Failed to connect wallet',
-          [{ text: 'OK' }]
-        );
-      }
     }
   };
 
@@ -196,28 +149,43 @@ export default function AuthScreen({ navigation }: any) {
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Secondary: WalletConnect (MiniPay, MetaMask Mobile, etc.) */}
-          <Button
-            title={walletConnect.isConnecting ? '⏳ Connecting...' : '📱 Connect Mobile Wallet'}
-            onPress={handleWalletConnectConnect}
-            disabled={walletConnect.isConnecting || !walletConnect.isInitialized}
-            loading={walletConnect.isConnecting}
-            variant="secondary"
-            size="lg"
-            fullWidth
-          />
+          {/* Manual Wallet Address Entry */}
+          <View style={styles.section}>
+            <Text style={styles.sectionSubtitle}>📝 Manual Wallet Connection</Text>
+            <Text style={styles.sectionDescription}>
+              For MiniPay, Valora, or other Celo wallets - enter your address
+            </Text>
+            
+            <Input
+              label="Wallet Address"
+              placeholder="0x..."
+              value={manualAddress}
+              onChangeText={setManualAddress}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            
+            <Button
+              title="Connect Address"
+              onPress={handleManualAddressConnect}
+              disabled={!manualAddress.trim()}
+              variant="secondary"
+              size="lg"
+              fullWidth
+            />
+          </View>
 
           {/* Info */}
           <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>💡 Wallet Options:</Text>
+            <Text style={styles.infoTitle}>💡 Connection Methods:</Text>
             <Text style={styles.infoText}>
-              • <Text style={styles.bold}>Mobile Wallet</Text> - MiniPay, MetaMask Mobile, etc.
+              • <Text style={styles.bold}>MetaMask SDK</Text> - Full transaction signing
             </Text>
             <Text style={styles.infoText}>
-              • <Text style={styles.bold}>MetaMask SDK</Text> - Direct connection (above)
+              • <Text style={styles.bold}>Manual Entry</Text> - Read-only mode (copy address from MiniPay/Valora)
             </Text>
             <Text style={styles.infoText}>
-              • <Text style={styles.bold}>Manual Entry</Text> - Read-only wallet address
+              • <Text style={styles.bold}>Phone Demo</Text> - Try without wallet
             </Text>
           </View>
         </View>
